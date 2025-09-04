@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package notification;
+
+// Service definition
+service NotificationService {
+  rpc notify(NotifyRequest) returns (NotifyResponse);
+  rpc notifyMany(NotifyManyRequest) returns (NotifyResponse);
+}
+
+// Messages
+message NotifyRequest {
+  string expenseId = 1;
+  string to = 2;
+  string message = 3;
+}
+
+message NotifyManyRequest {
+  string expenseId = 1;
+  repeated string recipients = 2;
+  string message = 3;
+}
+
+message NotifyResponse {
+  bool ok = 1;
+  string details = 2;
+}
