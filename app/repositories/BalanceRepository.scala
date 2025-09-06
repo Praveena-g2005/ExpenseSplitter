@@ -11,7 +11,7 @@ import scala.concurrent.{ExecutionContext, Future}
 class BalanceRepository @Inject()(dbConfigProvider: DatabaseConfigProvider)(implicit ec: ExecutionContext) {
 
   private val dbConfig = dbConfigProvider.get[MySQLProfile]
-  private val db = dbConfig.db
+  protected val db = dbConfig.db
 
   private val balances = TableQuery[BalanceTable]
 

@@ -4,14 +4,16 @@ import org.scalatestplus.play._
 import org.scalatestplus.play.guice._
 import play.api.test._
 import play.api.test.Helpers._
+import play.api.inject.guice.GuiceApplicationBuilder
+import app.grpc.Module
 
-/**
- * Add your spec here.
- * You can mock out a whole application including requests, plugins etc.
- *
- * For more information, see https://www.playframework.com/documentation/latest/ScalaTestingWithScalaTest
- */
 class HomeControllerSpec extends PlaySpec with GuiceOneAppPerTest with Injecting {
+
+  // Override fakeApplication to disable gRPC module
+  override def fakeApplication() = new GuiceApplicationBuilder()
+    .disable[Module]                 // disables the gRPC module
+    .configure("grpc.server.enabled" -> false)
+    .build()
 
   "HomeController GET" should {
 

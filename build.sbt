@@ -22,7 +22,8 @@ libraryDependencies ++= Seq(
   "org.scalatestplus.play" %% "scalatestplus-play" % "7.0.2" % Test,
   "org.scalatest"          %% "scalatest"          % "3.2.19" % Test,
   "org.mockito"            %% "mockito-scala"      % "1.17.14" % Test,
-  "com.typesafe.akka"      %% "akka-stream"        % "2.8.0"
+  "com.typesafe.akka"      %% "akka-stream"        % "2.8.0",
+  "com.h2database" % "h2" % "2.2.220" % Test
 )
 
 dependencyOverrides += "org.scala-lang.modules" %% "scala-xml" % "2.2.0"
