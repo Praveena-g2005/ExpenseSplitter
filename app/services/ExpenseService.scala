@@ -39,13 +39,6 @@ def addExpense(expense: Expense): Future[Expense] = {
   }
 }
 
-
-  // def addExpense(expense: Expense): Future[Expense] = {
-  //   expenseRepo.create(expense).map { id =>
-  //     expense.copy(id = Some(id))
-  //   }
-  // }
-
   /** Add expense and update balances immediately */
   def addExpenseAndUpdateBalances(expense: Expense): Future[Seq[Balance]] = {
     addExpense(expense).flatMap { _ =>

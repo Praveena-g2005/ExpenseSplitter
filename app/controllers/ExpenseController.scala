@@ -22,6 +22,21 @@ def createExpense: Action[JsValue] = Action.async(parse.json) { request =>
     Future.successful(BadRequest(Json.obj("error" -> "Invalid Expense JSON")))
   }
 }
+// def createExpense: Action[JsValue] = Action.async(parse.json) { request =>
+//   request.body.validate[Expense] match {
+//     case JsSuccess(expense, _) =>
+//       expenseService.addExpense(expense).map { created =>
+//         Ok(Json.toJson(created))
+//       }
+//     case JsError(errors) =>
+//       Future.successful(
+//         BadRequest(Json.obj(
+//           "error" -> "Invalid Expense JSON",
+//           "details" -> JsError.toJson(errors)
+//         ))
+//       )
+//   }
+// }
 
 def getBalances: Action[AnyContent] = Action.async {
   expenseService.calculateBalances().map { balances =>
