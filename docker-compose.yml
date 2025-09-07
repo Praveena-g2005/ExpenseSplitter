@@ -1,0 +1,40 @@
+version: "3.9"
+
+services:
+  db:
+    image: mysql:8.0
+    container_name: expense-mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME}
+    ports:
+      - "3307:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./conf/evolutions/default/1.sql:/docker-entrypoint-initdb.d/1.sql
+    networks:
+      - expense-net
+
+  app:
+    build: .
+    container_name: expense-app
+    restart: on-failure
+    depends_on:
+      - db
+    environment:
+      DB_URL: ${DB_URL}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "9000:9000"
+      - "50051:50051"
+    networks:
+      - expense-net
+
+volumes:
+  db_data:
+
+networks:
+  expense-net:
+    driver: bridge
