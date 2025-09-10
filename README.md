@@ -40,14 +40,15 @@ The application follows a layered structure:
 ## 🧪 Example Payloads
 
 #### Create Expense (POST /expenses)
-```json
+```
 {
   "paidBy": "John",
   "amount": 500,
   "participants": ["Alice", "Bob"]
-}
+} 
+```
 ## Example Response for GET /balances 
-
+```
 [
   {
     "from": "Alice",
@@ -60,7 +61,7 @@ The application follows a layered structure:
     "amount": 250
   }
 ]
-
+```
 ---
 
 ## 🛠️ Tech Stack
@@ -90,16 +91,16 @@ SQL Database
 ## 🚀 Installation & Setup
 
 Clone the repository:
-
+```
 git clone https://github.com/yourusername/expense-splitter.git
 cd expense-splitter
-
+```
 Configure your environment (e.g., database connection settings in application.conf).
 
 Build and run the application:
-
+```
 sbt run
-
+```
 The API will be available at:
 http://localhost:9000/
 
@@ -110,8 +111,6 @@ http://localhost:9000/
 Notifications are logged to console and saved in the database when a new expense is created.
 
 No specific validation is applied to user identifiers (can be names, IDs, etc.).
-
----
 
 Future improvements:
 
