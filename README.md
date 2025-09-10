@@ -46,7 +46,7 @@ The application follows a layered structure:
   "amount": 500,
   "participants": ["Alice", "Bob"]
 }
-**Example Response for GET /balances**
+## Example Response for GET /balances 
 
 [
   {
@@ -61,7 +61,9 @@ The application follows a layered structure:
   }
 ]
 
-**🛠️ Tech Stack**
+---
+
+## 🛠️ Tech Stack
 
 Scala (Play Framework)
 
@@ -71,23 +73,26 @@ SQL Database
 
 Play JSON for serialization
 
-**⚙️ Prerequisites**
+---
+
+## ⚙️ Prerequisites
 
 Git
 
-Java Development Kit (JDK) 11+
+Java Development Kit (JDK 11+)
 
 sbt (Scala Build Tool)
 
 SQL Database
 
-🚀 Installation & Setup
+---
+
+## 🚀 Installation & Setup
 
 Clone the repository:
 
 git clone https://github.com/yourusername/expense-splitter.git
 cd expense-splitter
-
 
 Configure your environment (e.g., database connection settings in application.conf).
 
@@ -95,15 +100,18 @@ Build and run the application:
 
 sbt run
 
-
 The API will be available at:
 http://localhost:9000/
 
-🚧 Notes
+---
+
+## 🚧 Notes
 
 Notifications are logged to console and saved in the database when a new expense is created.
 
 No specific validation is applied to user identifiers (can be names, IDs, etc.).
+
+---
 
 Future improvements:
 
@@ -113,7 +121,9 @@ Add settlement endpoint to explicitly record payments between users.
 
 Add endpoint to view notifications.
 
-🧪 Postman Testing
+---
+
+## 🧪 Postman Testing
 
 Example:
 
