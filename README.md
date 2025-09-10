@@ -22,9 +22,9 @@ The application follows a layered structure:
 - **Controllers** handle HTTP requests.  
 - **Services** implement business logic.  
 - **Repositories** manage database operations.  
-- **Models** define data structures (Expense, Balance, User, Notification, Settlement).  
+- **Models** define data structures (Expense, Balance, Notification).  
 - **gRPC Layer** handles notifications.  
-- **Configuration** is in `conf/app.conf`.  
+- **Configuration** is in `conf/application.conf`.  
 - **Tests** validate functionality.
 ---
 
@@ -92,8 +92,8 @@ SQL Database
 
 Clone the repository:
 ```
-git clone https://github.com/yourusername/expense-splitter.git
-cd expense-splitter
+git clone https://github.com/Praveena-g2005/ExpenseSplitter.git
+cd expenseservice
 ```
 Configure your environment (e.g., database connection settings in application.conf).
 
