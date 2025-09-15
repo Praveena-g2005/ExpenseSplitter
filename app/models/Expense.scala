@@ -4,9 +4,9 @@ import play.api.libs.json._
 
 case class Expense(
                     id: Option[Long] = None,
-                    paidBy: String,
+                    description: String,
                     amount: Double,
-                    participants: List[String]
+                    paidBy: Long
                   )
 
 object Expense {
