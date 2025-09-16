@@ -48,7 +48,6 @@ class BalanceController @Inject()(
 
   /**
    * GET /balances
-   * Get all balance records (mainly for testing/admin purposes)
    */
   def getAllBalances(): Action[AnyContent] = Action.async {
     logger.info("Fetching all balances")
@@ -68,7 +67,6 @@ class BalanceController @Inject()(
   /**
    * GET /balances/user/:userId
    * Get complete balance summary for a user - who they owe and who owes them
-   * This is the main dashboard view (like Splitwise)
    */
 def getUserBalances(userId: Long): Action[AnyContent] = Action.async {
   logger.info(s"Fetching balance summary for user: $userId")
@@ -79,7 +77,7 @@ def getUserBalances(userId: Long): Action[AnyContent] = Action.async {
       totalOwedByUser = summary.amountOwing,
       totalOwedToUser = summary.amountOwed,
       netBalance = summary.netBalance,
-      relationships = List() // Empty since we removed relationships
+      relationships = List() 
     )))
   }.recover {
     case ex: Exception =>

@@ -73,8 +73,6 @@ class ExpenseController @Inject()(
   cc: ControllerComponents,
   expenseService: ExpenseService
 )(implicit ec: ExecutionContext) extends AbstractController(cc) with Logging {
-
-  // Import JSON implicits for ExpenseDetails, Users, Participants, Balance
   import ExpenseServiceFormats._
 
   def createExpense(): Action[JsValue] = Action.async(parse.json) { request =>
