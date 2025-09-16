@@ -11,20 +11,20 @@ class ParticipantRepository @Inject()(dbConfigProvider :DatabaseConfigProvider)(
     private val db=dbConfigProvider.get.db
     private val participants = TableQuery[ParticipantsTable]
 
-    def create(participant : Participants): Future[Participants]{
+    def create(participant : Participants): Future[Participants] = {
         val participantwithoutid = participant.copy(id=None)
         val insertQuery= participants returning participants.map(_.id) += participantwithoutid
         db.run(insertQuery).map{generatedId =>
             participant.copy(id=Some(generatedId))
         }
     }
-    def findByExpenseId(id :Long): Future[List[Participants]]{
+    def findByExpenseId(id :Long): Future[List[Participants]] = {
         db.run(participants.filter(_.expenseid === id).result).map(_.toList)
     }
-    def findByUser(userid : Long) : Future[List[Participants]]{
+    def findByUser(userid : Long) : Future[List[Participants]] = {
         db.run(participants.filter(_.userid === userid).result).map(_.toList)
     }
-    def deleteByExpenseId(expenseid: Long) : Future[Int]{
+    def deleteByExpenseId(expenseid: Long) : Future[Int] = {
         db.run(participants.filter(_.expenseid === expenseid).delete)
     }
 }
