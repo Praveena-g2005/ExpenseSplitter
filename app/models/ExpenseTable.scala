@@ -13,6 +13,6 @@ class ExpenseTable(tag: Tag) extends Table[Expense](tag, "expenses") {
   def paidBy: Rep[Long] = column[Long]("paid_by")
   def fk_paidby = foreignKey("fk_paidby",paidBy,TableQuery[UserTable])(_.id)
 
-  def *:ProvenShape[Expense]=
+  def * :ProvenShape[Expense]=
     (id.?,description,amount,paidBy)<>(Expense.tupled,Expense.unapply)
 }

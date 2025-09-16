@@ -18,6 +18,6 @@ class UserTable(tag: Tag) extends Table[User](tag,"users"){
     def name: Rep[String] = column[String]("name")
     def email: Rep[String] = column[String]("email")
 
-    def *: ProvenShape[User]=
+    def * : ProvenShape[User]=
         (id.?,name,email)<>(User.tupled,User.unapply)
 }
