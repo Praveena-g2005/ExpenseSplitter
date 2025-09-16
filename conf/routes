@@ -10,5 +10,17 @@ GET     /                           controllers.HomeController.index()
 GET     /assets/*file               controllers.Assets.versioned(path="/public", file: Asset)
 
 # Expense APIs
-POST    /expenses              app.controllers.ExpenseController.createExpense
-GET     /balances              app.controllers.ExpenseController.getBalances
+# Expense APIs
+POST    /expenses                   app.controllers.ExpenseController.createExpense
+GET     /expenses                   app.controllers.ExpenseController.getAllExpenses  
+GET     /expenses/:id               app.controllers.ExpenseController.getExpenseById(id: Long)
+GET     /expenses/user/:userId      app.controllers.ExpenseController.getExpensesByUser(userId: Long)
+DELETE  /expenses/:id               app.controllers.ExpenseController.deleteExpense(id: Long)
+
+# Balance APIs
+
+GET     /balances                       app.controllers.BalanceController.getAllBalances
+GET     /balances/user/:userId          app.controllers.BalanceController.getUserBalances(userId: Long)
+GET     /balances/user/:userId/owes     app.controllers.BalanceController.getUserOwingBalances(userId: Long)
+GET     /balances/user/:userId/owed     app.controllers.BalanceController.getUserOwedBalances(userId: Long)
+GET     /balances/expense/:expenseId    app.controllers.BalanceController.getExpenseBalances(expenseId: Long)
