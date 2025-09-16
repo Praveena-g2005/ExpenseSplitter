@@ -1,94 +1,160 @@
 package app.services
 
-import javax.inject._
-import app.models.{Expense, Balance}
-import app.repositories.{ExpenseRepository, BalanceRepository}
+import play.api.libs.json._
+import app.models.{Expense, Participants, Balance, UserTable}
+import app.repositories.{ExpenseRepository, ParticipantRepository, BalanceRepository, UserRepository}
+import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
-import scala.collection.mutable
-import app.grpc.NotificationClient
-import notification.notification.{NotificationServiceGrpc, NotifyRequest, NotifyResponse, NotifyManyRequest}
-@Singleton
-class ExpenseService @Inject()(
-  expenseRepo: ExpenseRepository,
-  balanceRepo: BalanceRepository,
-  notificationClient: NotificationClient 
-)(implicit ec: ExecutionContext) {
+import play.api.Logging
+import app.models.User
 
-  /** Add a new expense (writes to DB) */
-def addExpense(expense: Expense): Future[Expense] = {
-  // Step 1: Save expense in DB
-  expenseRepo.create(expense).flatMap { id =>
-    val created = expense.copy(id = Some(id))
+// Supporting case classes
+case class ParticipantShare(userId: Long, shareAmount: Double)
+case class ExpenseCreationResult(expense: Expense, balances: List[Balance])
+case class ExpenseDetails(
+  expense: Expense,
+  participants: List[Participants],
+  balances: List[Balance],
+  participantUsers: List[User]
+)
+case class UserExpenseStats(
+  totalPaid: Double,
+  expenseCount: Int,
+  totalOwedByUser: Double,
+  totalOwedToUser: Double,
+  netBalance: Double
+)
 
-    // Step 2: Prepare notification
-    val recipients = created.participants.filterNot(_ == created.paidBy)
-    val msg = s"${created.paidBy} paid ₹${created.amount} split among ${created.participants.mkString(", ")}"
-
-    // Step 3: Fire-and-forget gRPC notification
-    notificationClient.notifyMany(      
-  id,          // Long
-  recipients,  // Seq[String]
-  msg          // String
-    ).recover { case e =>
-      println(s"[gRPC] Notify failed: ${e.getMessage}")
-      NotifyResponse(ok = false, details = e.getMessage)
-    }
-
-    // Step 4: Return the created expense
-    Future.successful(created)
-  }
+object ExpenseServiceFormats {
+  implicit val userTableFormat: OFormat[User] = Json.format[User]
+  implicit val participantShareFormat: OFormat[ParticipantShare] = Json.format[ParticipantShare]
+  implicit val expenseDetailsFormat: OFormat[ExpenseDetails] = Json.format[ExpenseDetails]
 }
 
-  /** Add expense and update balances immediately */
-  def addExpenseAndUpdateBalances(expense: Expense): Future[Seq[Balance]] = {
-    addExpense(expense).flatMap { _ =>
-      calculateBalances()
+@Singleton
+class ExpenseService @Inject()(
+  expenseRepository: ExpenseRepository,
+  participantRepository: ParticipantRepository,
+  balanceRepository: BalanceRepository,
+  userRepository: UserRepository
+)(implicit ec: ExecutionContext) extends Logging {
+
+  import ExpenseServiceFormats._  // bring JSON implicits into scope
+
+  /** Creates an expense and calculates balances */
+  def createExpense(
+    description: String,
+    amount: Double,
+    paidBy: Long,
+    participants: List[ParticipantShare]
+  ): Future[ExpenseCreationResult] = {
+
+    val totalShares = participants.map(_.shareAmount).sum
+    if (Math.abs(totalShares - amount) > 0.01) {
+      Future.failed(new IllegalArgumentException(s"Participant shares ($totalShares) don't match expense amount ($amount)"))
+    } else {
+      createExpenseTransaction(description, amount, paidBy, participants)
     }
   }
 
-  /** Calculate balances for all participants (reads from DB) */
-  def calculateBalances(): Future[Seq[Balance]] = {
-    expenseRepo.all().flatMap { expenses =>
-      if (expenses.isEmpty) Future.successful(Seq.empty)
-      else {
-        // Step 1: Collect all pairwise debts
-        val debts = mutable.Map[(String, String), Double]().withDefaultValue(0.0)
-        expenses.foreach { e =>
-          val splitAmount = e.amount / e.participants.size
-          e.participants.foreach { participant =>
-            if (participant != e.paidBy) {
-              debts((participant, e.paidBy)) += splitAmount
+  /** Helper method for equal split expenses */
+  def createEqualSplitExpense(
+    description: String,
+    amount: Double,
+    paidBy: Long,
+    participantIds: List[Long]
+  ): Future[ExpenseCreationResult] = {
+    val sharePerPerson = amount / participantIds.length
+    val participants = participantIds.map(id => ParticipantShare(id, sharePerPerson))
+    createExpense(description, amount, paidBy, participants)
+  }
+
+  def getAllExpenses(): Future[List[Expense]] = expenseRepository.findAll()
+
+  private def createExpenseTransaction(
+    description: String,
+    amount: Double,
+    paidBy: Long,
+    participants: List[ParticipantShare]
+  ): Future[ExpenseCreationResult] = {
+
+    val expense = Expense(id = None, description = description, amount = amount, paidBy = paidBy)
+
+    for {
+      createdExpense <- expenseRepository.create(expense)
+
+      participantRecords = participants.map(p => Participants(
+        id = None,
+        expenseid = createdExpense.id.get,
+        userid = p.userId,
+        sharedamt = p.shareAmount
+      ))
+      _ <- Future.sequence(participantRecords.map(participantRepository.create))
+
+      balanceRecords = participants
+        .filter(_.userId != paidBy)
+        .map(p => Balance(
+          id = None,
+          from = p.userId,
+          to = paidBy,
+          amount = p.shareAmount,
+          expenseId = createdExpense.id.get
+        ))
+
+      createdBalances <- Future.sequence(balanceRecords.map(balanceRepository.create))
+
+    } yield ExpenseCreationResult(createdExpense, createdBalances)
+  }
+
+  /** Get all expenses for a user (paid by them or participated in) */
+  def getUserExpenses(userId: Long): Future[List[Expense]] = {
+    for {
+      paidExpenses <- expenseRepository.findByPaidBy(userId)
+      participatedExpenses <- expenseRepository.findByParticipant(userId)
+    } yield (paidExpenses ++ participatedExpenses).distinctBy(_.id)
+  }
+
+  /** Delete an expense and all related data */
+  def deleteExpense(expenseId: Long): Future[Boolean] = {
+    for {
+      _ <- balanceRepository.deleteByExpenseId(expenseId)
+      _ <- participantRepository.deleteByExpenseId(expenseId)
+      deleteCount <- expenseRepository.deleteById(expenseId)
+    } yield deleteCount > 0
+  }
+
+  /** Get expense details with participants */
+  def getExpenseDetails(expenseId: Long): Future[Option[ExpenseDetails]] = {
+    for {
+      expenseOpt <- expenseRepository.findById(expenseId)
+      expense <- expenseOpt match {
+        case Some(exp) =>
+          for {
+            participants <- participantRepository.findByExpenseId(expenseId)
+            balances <- balanceRepository.findByExpenseId(expenseId)
+            participantUsers <- {
+              val userIds = participants.map(_.userid)
+              userRepository.findByIds(userIds)
             }
-          }
-        }
-
-        // Step 2: Net the debts
-        val netDebts = mutable.Map[(String, String), Double]()
-        val processedPairs = mutable.Set[(String, String)]()
-
-        debts.foreach { case ((from, to), amount) =>
-          if (from != to && !processedPairs.contains((from, to)) && !processedPairs.contains((to, from))) {
-            val reverseAmount = debts.getOrElse((to, from), 0.0)
-            val netAmount = amount - reverseAmount
-            if (netAmount > 0) netDebts((from, to)) = netAmount
-            else if (netAmount < 0) netDebts((to, from)) = -netAmount
-            processedPairs += ((from, to))
-            processedPairs += ((to, from))
-          }
-        }
-
-        // Step 3: Convert to Balance objects
-        val balances = netDebts.collect {
-          case ((from, to), amount) if from != to && amount > 0 =>
-            Balance(None, from, to, amount)
-        }.toSeq
-
-        // Step 4: Clear old balances and save new ones
-        for {
-          _ <- balanceRepo.clear()
-          _ <- balanceRepo.saveAll(balances)
-        } yield balances
+          } yield Some(ExpenseDetails(exp, participants, balances, participantUsers))
+        case None => Future.successful(None)
       }
-    }
+    } yield expense
+  }
+
+  /** Get user's expense statistics */
+  def getUserExpenseStats(userId: Long): Future[UserExpenseStats] = {
+    for {
+      totalPaid <- expenseRepository.getTotalPaidBy(userId)
+      expenseCount <- expenseRepository.countByUser(userId)
+      totalOwed <- balanceRepository.getTotalOwnedBy(userId)
+      totalOwedTo <- balanceRepository.getTotalOwnedTo(userId)
+    } yield UserExpenseStats(
+      totalPaid = totalPaid,
+      expenseCount = expenseCount,
+      totalOwedByUser = totalOwed,
+      totalOwedToUser = totalOwedTo,
+      netBalance = totalOwedTo - totalOwed
+    )
   }
 }
