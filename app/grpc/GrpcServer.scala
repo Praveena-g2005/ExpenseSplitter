@@ -8,10 +8,11 @@ import play.api.Logging
 import notification.notification.NotificationServiceGrpc
 
 @Singleton
-class GrpcServer @Inject()(
+class GrpcServer @Inject() (
   svc: NotificationServiceImpl,
   lifecycle: ApplicationLifecycle
-)(implicit ec: ExecutionContext) extends Logging {
+)(implicit ec: ExecutionContext)
+    extends Logging {
 
   // Start gRPC server
   private val server: Server =

@@ -40,9 +40,9 @@ object Validators {
   }
 
   def validateAmount(
-      amount: Double,
-      fieldname: String = "amount"
-  ): ValidationResult = {
+    amount: Double,
+    fieldname: String = "amount"
+  ): ValidationResult =
     if (amount <= 0) {
       ValidationFailure("Amount should be positive")
     } else if (amount > 100000) {
@@ -50,12 +50,9 @@ object Validators {
     } else {
       ValidationSuccess
     }
-  }
-  def sanitizeName(name: String): String = {
+  def sanitizeName(name: String): String =
     name.trim.replaceAll("\\s+", " ")
-  }
 
-  def sanitizeEmail(email: String): String = {
+  def sanitizeEmail(email: String): String =
     email.trim.toLowerCase
-  }
 }

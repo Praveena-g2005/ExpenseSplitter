@@ -7,39 +7,38 @@ import play.api.mvc._
 import play.api.libs.json._
 import scala.concurrent.{ExecutionContext, Future}
 import play.api.Logging
-import app.dtos.{BalanceListResponse, UserBalanceResponse, BalanceErrorResponse}
+import app.dtos.{BalanceErrorResponse, BalanceListResponse, UserBalanceResponse}
 import app.utils.{AuthAction, AuthenticatedRequest} // Add this
 
 @Singleton
 class BalanceController @Inject() (
-    cc: ControllerComponents,
-    balanceService: BalanceService,
-    authAction: AuthAction // Add this
+  cc: ControllerComponents,
+  balanceService: BalanceService,
+  authAction: AuthAction // Add this
 )(implicit ec: ExecutionContext)
     extends AbstractController(cc)
     with Logging {
 
   // GET /balances - Protected
-  def getAllBalances(): Action[AnyContent] = authAction.async {
-    request: AuthenticatedRequest[AnyContent] =>
-      logger.info(s"Fetching all balances for user: ${request.user.id}")
+  def getAllBalances(): Action[AnyContent] = authAction.async { request: AuthenticatedRequest[AnyContent] =>
+    logger.info(s"Fetching all balances for user: ${request.user.id}")
 
-      // Only return balances involving this user
-      val userId = request.user.id.get
-      for {
-        owingBalances <- balanceService.getUnsettledBalances(userId)
-        owedBalances <- balanceService.getIncomingBalances(userId)
-      } yield {
-        val allUserBalances = (owingBalances ++ owedBalances).distinctBy(_.id)
-        Ok(
-          Json.toJson(
-            BalanceListResponse(
-              balances = allUserBalances,
-              count = allUserBalances.length
-            )
+    // Only return balances involving this user
+    val userId = request.user.id.get
+    for {
+      owingBalances <- balanceService.getUnsettledBalances(userId)
+      owedBalances <- balanceService.getIncomingBalances(userId)
+    } yield {
+      val allUserBalances = (owingBalances ++ owedBalances).distinctBy(_.id)
+      Ok(
+        Json.toJson(
+          BalanceListResponse(
+            balances = allUserBalances,
+            count = allUserBalances.length
           )
         )
-      }
+      )
+    }
   }
 
   // GET /balances/user/:userId - Protected
@@ -72,19 +71,20 @@ class BalanceController @Inject() (
               )
             )
           }
-          .recover { case ex: Exception =>
-            logger.error(
-              s"Error fetching balance summary for user $userId: ${ex.getMessage}",
-              ex
-            )
-            InternalServerError(
-              Json.toJson(
-                BalanceErrorResponse(
-                  false,
-                  "Error fetching user balance summary"
+          .recover {
+            case ex: Exception =>
+              logger.error(
+                s"Error fetching balance summary for user $userId: ${ex.getMessage}",
+                ex
+              )
+              InternalServerError(
+                Json.toJson(
+                  BalanceErrorResponse(
+                    false,
+                    "Error fetching user balance summary"
+                  )
                 )
               )
-            )
           }
       }
   }
@@ -115,16 +115,17 @@ class BalanceController @Inject() (
               )
             )
           }
-          .recover { case ex: Exception =>
-            logger.error(
-              s"Error fetching owing balances for user $userId: ${ex.getMessage}",
-              ex
-            )
-            InternalServerError(
-              Json.toJson(
-                BalanceErrorResponse(false, "Error fetching owing balances")
+          .recover {
+            case ex: Exception =>
+              logger.error(
+                s"Error fetching owing balances for user $userId: ${ex.getMessage}",
+                ex
               )
-            )
+              InternalServerError(
+                Json.toJson(
+                  BalanceErrorResponse(false, "Error fetching owing balances")
+                )
+              )
           }
       }
     }
@@ -155,16 +156,17 @@ class BalanceController @Inject() (
               )
             )
           }
-          .recover { case ex: Exception =>
-            logger.error(
-              s"Error fetching owed balances for user $userId: ${ex.getMessage}",
-              ex
-            )
-            InternalServerError(
-              Json.toJson(
-                BalanceErrorResponse(false, "Error fetching owed balances")
+          .recover {
+            case ex: Exception =>
+              logger.error(
+                s"Error fetching owed balances for user $userId: ${ex.getMessage}",
+                ex
               )
-            )
+              InternalServerError(
+                Json.toJson(
+                  BalanceErrorResponse(false, "Error fetching owed balances")
+                )
+              )
           }
       }
   }
@@ -219,16 +221,17 @@ class BalanceController @Inject() (
             }
           }
         }
-        .recover { case ex: Exception =>
-          logger.error(
-            s"Error fetching balances for expense $expenseId: ${ex.getMessage}",
-            ex
-          )
-          InternalServerError(
-            Json.toJson(
-              BalanceErrorResponse(false, "Error fetching expense balances")
+        .recover {
+          case ex: Exception =>
+            logger.error(
+              s"Error fetching balances for expense $expenseId: ${ex.getMessage}",
+              ex
             )
-          )
+            InternalServerError(
+              Json.toJson(
+                BalanceErrorResponse(false, "Error fetching expense balances")
+              )
+            )
         }
     }
 }

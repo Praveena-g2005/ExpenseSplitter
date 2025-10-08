@@ -1,13 +1,8 @@
 package app.services
 
 import play.api.libs.json._
-import app.models.{Expense, Participants, Balance, UserTable}
-import app.repositories.{
-  ExpenseRepository,
-  ParticipantRepository,
-  BalanceRepository,
-  UserRepository
-}
+import app.models.{Balance, Expense, Participants, UserTable}
+import app.repositories.{BalanceRepository, ExpenseRepository, ParticipantRepository, UserRepository}
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 import play.api.Logging
@@ -17,17 +12,17 @@ import app.models.User
 case class ParticipantShare(userId: Long, shareAmount: Double)
 case class ExpenseCreationResult(expense: Expense, balances: List[Balance])
 case class ExpenseDetails(
-    expense: Expense,
-    participants: List[Participants],
-    balances: List[Balance],
-    participantUsers: List[User]
+  expense: Expense,
+  participants: List[Participants],
+  balances: List[Balance],
+  participantUsers: List[User]
 )
 case class UserExpenseStats(
-    totalPaid: Double,
-    expenseCount: Int,
-    totalOwedByUser: Double,
-    totalOwedToUser: Double,
-    netBalance: Double
+  totalPaid: Double,
+  expenseCount: Int,
+  totalOwedByUser: Double,
+  totalOwedToUser: Double,
+  netBalance: Double
 )
 
 object ExpenseServiceFormats {
@@ -40,10 +35,10 @@ object ExpenseServiceFormats {
 
 @Singleton
 class ExpenseService @Inject() (
-    expenseRepository: ExpenseRepository,
-    participantRepository: ParticipantRepository,
-    balanceRepository: BalanceRepository,
-    userRepository: UserRepository
+  expenseRepository: ExpenseRepository,
+  participantRepository: ParticipantRepository,
+  balanceRepository: BalanceRepository,
+  userRepository: UserRepository
 )(implicit ec: ExecutionContext)
     extends Logging {
 
@@ -51,10 +46,10 @@ class ExpenseService @Inject() (
 
   /** Creates an expense and calculates balances */
   def createExpense(
-      description: String,
-      amount: Double,
-      paidBy: Long,
-      participants: List[ParticipantShare]
+    description: String,
+    amount: Double,
+    paidBy: Long,
+    participants: List[ParticipantShare]
   ): Future[ExpenseCreationResult] = {
 
     val totalShares = participants.map(_.shareAmount).sum
@@ -71,10 +66,10 @@ class ExpenseService @Inject() (
 
   /** Helper method for equal split expenses */
   def createEqualSplitExpense(
-      description: String,
-      amount: Double,
-      paidBy: Long,
-      participantIds: List[Long]
+    description: String,
+    amount: Double,
+    paidBy: Long,
+    participantIds: List[Long]
   ): Future[ExpenseCreationResult] = {
     val sharePerPerson = amount / participantIds.length
     val participants =
@@ -85,10 +80,10 @@ class ExpenseService @Inject() (
   def getAllExpenses(): Future[List[Expense]] = expenseRepository.findAll()
 
   private def createExpenseTransaction(
-      description: String,
-      amount: Double,
-      paidBy: Long,
-      participants: List[ParticipantShare]
+    description: String,
+    amount: Double,
+    paidBy: Long,
+    participants: List[ParticipantShare]
   ): Future[ExpenseCreationResult] = {
 
     val expense = Expense(
@@ -131,24 +126,22 @@ class ExpenseService @Inject() (
   }
 
   /** Get all expenses for a user (paid by them or participated in) */
-  def getUserExpenses(userId: Long): Future[List[Expense]] = {
+  def getUserExpenses(userId: Long): Future[List[Expense]] =
     for {
       paidExpenses <- expenseRepository.findByPaidBy(userId)
       participatedExpenses <- expenseRepository.findByParticipant(userId)
     } yield (paidExpenses ++ participatedExpenses).distinctBy(_.id)
-  }
 
   /** Delete an expense and all related data */
-  def deleteExpense(expenseId: Long): Future[Boolean] = {
+  def deleteExpense(expenseId: Long): Future[Boolean] =
     for {
       _ <- balanceRepository.deleteByExpenseId(expenseId)
       _ <- participantRepository.deleteByExpenseId(expenseId)
       deleteCount <- expenseRepository.deleteById(expenseId)
     } yield deleteCount > 0
-  }
 
   /** Get expense details with participants */
-  def getExpenseDetails(expenseId: Long): Future[Option[ExpenseDetails]] = {
+  def getExpenseDetails(expenseId: Long): Future[Option[ExpenseDetails]] =
     for {
       expenseOpt <- expenseRepository.findById(expenseId)
       expense <- expenseOpt match {
@@ -166,10 +159,9 @@ class ExpenseService @Inject() (
         case None => Future.successful(None)
       }
     } yield expense
-  }
 
   /** Get user's expense statistics */
-  def getUserExpenseStats(userId: Long): Future[UserExpenseStats] = {
+  def getUserExpenseStats(userId: Long): Future[UserExpenseStats] =
     for {
       totalPaid <- expenseRepository.getTotalPaidBy(userId)
       expenseCount <- expenseRepository.countByUser(userId)
@@ -182,5 +174,4 @@ class ExpenseService @Inject() (
       totalOwedToUser = totalOwedTo,
       netBalance = totalOwedTo - totalOwed
     )
-  }
 }

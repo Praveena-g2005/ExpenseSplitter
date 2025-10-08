@@ -5,10 +5,10 @@ import slick.jdbc.MySQLProfile.api._
 import slick.lifted.{ProvenShape, Tag}
 
 case class User(
-    id: Option[Long] = None,
-    name: String,
-    email: String,
-    passwordHash: String
+  id: Option[Long] = None,
+  name: String,
+  email: String,
+  passwordHash: String
 )
 object User {
   implicit val Format: OFormat[User] = Json.format[User]

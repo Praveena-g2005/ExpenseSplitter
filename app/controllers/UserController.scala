@@ -3,15 +3,15 @@ package app.controllers
 import app.services.UserService
 import play.api.libs.json._
 import javax.inject.{Inject, Singleton}
-import app.dtos.{CreateUserRequest, UserResponse, ErrorResponse}
+import app.dtos.{CreateUserRequest, ErrorResponse, UserResponse}
 import play.api.Logging
 import play.api.mvc._
 import scala.concurrent.{ExecutionContext, Future}
 import app.dtos.CreateUserRequest._
 @Singleton
 class UserController @Inject() (
-    userService: UserService,
-    cc: ControllerComponents
+  userService: UserService,
+  cc: ControllerComponents
 )(implicit ec: ExecutionContext)
     extends AbstractController(cc)
     with Logging {
@@ -33,13 +33,14 @@ class UserController @Inject() (
               logger.warn(s"User creation failed : $errormessage")
               BadRequest(Json.toJson(ErrorResponse(errormessage)))
           }
-          .recover { case ex: Exception =>
-            logger.error(s"unexpected error :${ex.getMessage}")
-            InternalServerError(
-              Json.toJson(ErrorResponse("Internal Server Error"))
-            )
+          .recover {
+            case ex: Exception =>
+              logger.error(s"unexpected error :${ex.getMessage}")
+              InternalServerError(
+                Json.toJson(ErrorResponse("Internal Server Error"))
+              )
           }
-      case JsError(errors) => {
+      case JsError(errors) =>
         val errordetails = formatJsonErrors(errors)
         logger.warn(s"Invalid Json Format $errordetails")
         Future.successful(
@@ -52,7 +53,6 @@ class UserController @Inject() (
             )
           )
         )
-      }
     }
   }
 
@@ -64,9 +64,10 @@ class UserController @Inject() (
         val userresponse = users.map(UserResponse.fromUser)
         Ok(Json.toJson(userresponse))
       }
-      .recover { case ex: Exception =>
-        logger.error(s"Error in fetching user : ${ex.getMessage}")
-        InternalServerError(Json.toJson(ErrorResponse("Failed Fetching users")))
+      .recover {
+        case ex: Exception =>
+          logger.error(s"Error in fetching user : ${ex.getMessage}")
+          InternalServerError(Json.toJson(ErrorResponse("Failed Fetching users")))
       }
   }
 
@@ -81,23 +82,24 @@ class UserController @Inject() (
           logger.warn(s"User not found with the id :$id")
           NotFound(Json.toJson(ErrorResponse(s"User not found with id : $id")))
       }
-      .recover { case ex: Exception =>
-        logger.error(s"Error in fetching user : ${ex.getMessage}")
-        InternalServerError(
-          Json.toJson(ErrorResponse(s"Failed Fetching user with id :$id"))
-        )
+      .recover {
+        case ex: Exception =>
+          logger.error(s"Error in fetching user : ${ex.getMessage}")
+          InternalServerError(
+            Json.toJson(ErrorResponse(s"Failed Fetching user with id :$id"))
+          )
       }
   }
 
   private def formatJsonErrors(
-      errors: scala.collection.Seq[
-        (JsPath, scala.collection.Seq[JsonValidationError])
-      ]
-  ): Map[String, String] = {
-    errors.map { case (path, validationErrors) =>
-      val field = path.toJsonString.replaceAll("^\\.|^/", "")
-      val messages = validationErrors.map(_.message).mkString(", ")
-      field -> messages
+    errors: scala.collection.Seq[
+      (JsPath, scala.collection.Seq[JsonValidationError])
+    ]
+  ): Map[String, String] =
+    errors.map {
+      case (path, validationErrors) =>
+        val field = path.toJsonString.replaceAll("^\\.|^/", "")
+        val messages = validationErrors.map(_.message).mkString(", ")
+        field -> messages
     }.toMap
-  }
 }

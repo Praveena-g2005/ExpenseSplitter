@@ -5,14 +5,14 @@ import scala.concurrent.{ExecutionContext, Future}
 import app.repositories.NotificationRepository
 import app.models.Notification
 
-import notification.notification._  // generated messages
+import notification.notification._ // generated messages
 import notification.notification.NotificationServiceGrpc
 
 @Singleton
-class NotificationServiceImpl @Inject()(
+class NotificationServiceImpl @Inject() (
   repo: NotificationRepository
 )(implicit ec: ExecutionContext)
-  extends NotificationServiceGrpc.NotificationService {
+    extends NotificationServiceGrpc.NotificationService {
 
   override def notify(request: NotifyRequest): Future[NotifyResponse] = {
     val rec = Notification(None, request.expenseId, request.to, request.message)

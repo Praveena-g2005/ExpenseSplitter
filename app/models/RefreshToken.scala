@@ -6,19 +6,18 @@ import slick.lifted.{ProvenShape, Tag}
 import java.time.LocalDateTime
 
 case class RefreshToken(
-    id: Option[Long] = None,
-    userId: Long,
-    token: String,
-    expiresAt: LocalDateTime,
-    revoked: Boolean = false
+  id: Option[Long] = None,
+  userId: Long,
+  token: String,
+  expiresAt: LocalDateTime,
+  revoked: Boolean = false
 )
 
 object RefreshToken {
   implicit val format: OFormat[RefreshToken] = Json.format[RefreshToken]
 }
 
-class RefreshTokenTable(tag: Tag)
-    extends Table[RefreshToken](tag, "refresh_tokens") {
+class RefreshTokenTable(tag: Tag) extends Table[RefreshToken](tag, "refresh_tokens") {
   def id: Rep[Long] = column[Long]("id", O.PrimaryKey, O.AutoInc)
   def userId: Rep[Long] = column[Long]("user_id")
   def token: Rep[String] = column[String]("token")

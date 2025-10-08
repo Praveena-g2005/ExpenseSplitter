@@ -7,7 +7,7 @@ import java.time.Instant
 import java.util.Date
 import play.api.Configuration
 import javax.inject.{Inject, Singleton}
-import scala.util.{Try, Success, Failure}
+import scala.util.{Failure, Success, Try}
 
 case class JwtClaims(userId: Long, email: String)
 
@@ -32,7 +32,7 @@ class JwtUtil @Inject() (config: Configuration) {
       .sign(algorithm)
   }
 
-  def validateToken(token: String): Try[JwtClaims] = {
+  def validateToken(token: String): Try[JwtClaims] =
     Try {
       val verifier = JWT.require(algorithm).build()
       val decoded = verifier.verify(token)
@@ -40,5 +40,4 @@ class JwtUtil @Inject() (config: Configuration) {
       val email = decoded.getClaim("email").asString()
       JwtClaims(userId, email)
     }
-  }
 }

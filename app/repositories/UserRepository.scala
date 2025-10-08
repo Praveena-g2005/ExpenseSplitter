@@ -7,23 +7,20 @@ import play.api.db.slick.DatabaseConfigProvider
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class UserRepository @Inject() (dbConfigProvider: DatabaseConfigProvider)(
-    implicit ec: ExecutionContext
+class UserRepository @Inject() (dbConfigProvider: DatabaseConfigProvider)(implicit
+  ec: ExecutionContext
 ) {
   private val users = TableQuery[UserTable]
   private val db = dbConfigProvider.get.db
 
-  def findById(id: Long): Future[Option[User]] = {
+  def findById(id: Long): Future[Option[User]] =
     db.run(users.filter(_.id === id).result.headOption)
-  }
 
-  def findByEmail(email: String): Future[Option[User]] = {
+  def findByEmail(email: String): Future[Option[User]] =
     db.run(users.filter(_.email === email).result.headOption)
-  }
 
-  def findByEmailWithPassword(email: String): Future[Option[User]] = {
+  def findByEmailWithPassword(email: String): Future[Option[User]] =
     db.run(users.filter(_.email === email).result.headOption)
-  }
 
   def create(user: User): Future[User] = {
     val userwithoutId = user.copy(id = None)
@@ -40,15 +37,12 @@ class UserRepository @Inject() (dbConfigProvider: DatabaseConfigProvider)(
     }
   }
 
-  def findAll(): Future[List[User]] = {
+  def findAll(): Future[List[User]] =
     db.run(users.result).map(_.toList)
-  }
 
-  def findByIds(ids: List[Long]): Future[List[User]] = {
+  def findByIds(ids: List[Long]): Future[List[User]] =
     db.run(users.filter(_.id inSet ids).result).map(_.toList)
-  }
 
-  def isEmailexists(email: String): Future[Boolean] = {
+  def isEmailexists(email: String): Future[Boolean] =
     findByEmail(email).map(_.isDefined)
-  }
 }

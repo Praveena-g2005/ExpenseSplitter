@@ -11,9 +11,9 @@ import play.api.Logging
 
 @Singleton
 class AuthAction @Inject() (
-    parser: BodyParsers.Default,
-    authService: AuthService,
-    userRepository: UserRepository
+  parser: BodyParsers.Default,
+  authService: AuthService,
+  userRepository: UserRepository
 )(implicit ec: ExecutionContext)
     extends ActionBuilder[AuthenticatedRequest, AnyContent]
     with Logging {
@@ -22,8 +22,8 @@ class AuthAction @Inject() (
   override def parser: BodyParser[AnyContent] = parser
 
   override def invokeBlock[A](
-      request: Request[A],
-      block: AuthenticatedRequest[A] => Future[Result]
+    request: Request[A],
+    block: AuthenticatedRequest[A] => Future[Result]
   ): Future[Result] = {
 
     logger.info(
@@ -63,7 +63,7 @@ class AuthAction @Inject() (
     }
   }
 
-  private def extractToken[A](request: Request[A]): Option[String] = {
+  private def extractToken[A](request: Request[A]): Option[String] =
     request.headers.get("Authorization").flatMap { authHeader =>
       logger.info(s"AuthAction: Authorization header: $authHeader")
       if (authHeader.startsWith("Bearer ")) {
@@ -75,5 +75,4 @@ class AuthAction @Inject() (
         None
       }
     }
-  }
 }

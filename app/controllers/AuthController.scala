@@ -1,6 +1,6 @@
 package app.controllers
 
-import app.services.{UserService, AuthService}
+import app.services.{AuthService, UserService}
 import play.api.libs.json._
 import play.api.mvc._
 import javax.inject.{Inject, Singleton}
@@ -23,10 +23,10 @@ object RefreshRequest {
 }
 
 case class LoginResponse(
-    accessToken: String,
-    refreshToken: String,
-    expiresIn: Int,
-    user: UserInfo
+  accessToken: String,
+  refreshToken: String,
+  expiresIn: Int,
+  user: UserInfo
 )
 object LoginResponse {
   implicit val format: OFormat[LoginResponse] = Json.format[LoginResponse]
@@ -49,9 +49,9 @@ object ErrorResponse {
 
 @Singleton
 class AuthController @Inject() (
-    cc: ControllerComponents,
-    userService: UserService,
-    authService: AuthService
+  cc: ControllerComponents,
+  userService: UserService,
+  authService: AuthService
 )(implicit ec: ExecutionContext)
     extends AbstractController(cc)
     with Logging {

@@ -3,26 +3,21 @@ package app.services
 import app.models.User
 import app.repositories.UserRepository
 import app.utils.PasswordHasher
-import app.utils.{
-  ValidationResult,
-  ValidationSuccess,
-  ValidationFailure,
-  Validators
-}
+import app.utils.{ValidationFailure, ValidationResult, ValidationSuccess, Validators}
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 import play.api.Logging
 
 @Singleton
 class UserService @Inject() (
-    userRepository: UserRepository
+  userRepository: UserRepository
 )(implicit ec: ExecutionContext)
     extends Logging {
 
   def createUser(
-      name: String,
-      email: String,
-      password: String
+    name: String,
+    email: String,
+    password: String
   ): Future[Either[String, User]] = {
     logger.info(s"Creating user with email: $email")
 
@@ -54,10 +49,11 @@ class UserService @Inject() (
                           .info(s"User created successfully: ${createdUser.id}")
                         Right(createdUser)
                       }
-                      .recover { case ex: Exception =>
-                        logger
-                          .error(s"Failed to create user: ${ex.getMessage}", ex)
-                        Left("Failed to create user. Please try again.")
+                      .recover {
+                        case ex: Exception =>
+                          logger
+                            .error(s"Failed to create user: ${ex.getMessage}", ex)
+                          Left("Failed to create user. Please try again.")
                       }
                   }
                 }
@@ -74,7 +70,7 @@ class UserService @Inject() (
     }
   }
 
-  private def validatePassword(password: String): ValidationResult = {
+  private def validatePassword(password: String): ValidationResult =
     if (password.length < 8) {
       ValidationFailure("Password must be at least 8 characters")
     } else if (!password.exists(_.isUpper)) {
@@ -84,7 +80,6 @@ class UserService @Inject() (
     } else {
       ValidationSuccess
     }
-  }
 
   def getAllUser(): Future[List[User]] = {
     logger.info("Getting all users")

@@ -6,18 +6,17 @@ import slick.lifted.{ProvenShape, Tag}
 import app.models.{ExpenseTable, UserTable}
 
 case class Participants(
-    id: Option[Long] = None,
-    expenseid: Long,
-    userid: Long,
-    sharedamt: Double
+  id: Option[Long] = None,
+  expenseid: Long,
+  userid: Long,
+  sharedamt: Double
 )
 
 object Participants {
   implicit val format: OFormat[Participants] = Json.format[Participants]
 }
 
-class ParticipantsTable(tag: Tag)
-    extends Table[Participants](tag, "expense_participants") {
+class ParticipantsTable(tag: Tag) extends Table[Participants](tag, "expense_participants") {
   def id: Rep[Long] = column[Long]("id", O.PrimaryKey, O.AutoInc)
   def expenseid: Rep[Long] = column[Long]("expense_id")
   def userid: Rep[Long] = column[Long]("user_id")

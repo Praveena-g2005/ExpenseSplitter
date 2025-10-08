@@ -8,7 +8,7 @@ import notification.notification._
 import notification.notification.NotificationServiceGrpc
 
 @Singleton
-class NotificationClient @Inject()(implicit ec: ExecutionContext) {
+class NotificationClient @Inject() (implicit ec: ExecutionContext) {
 
   private val channel =
     ManagedChannelBuilder.forAddress("localhost", 9001).usePlaintext().build()

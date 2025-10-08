@@ -7,11 +7,11 @@ import app.models.UserTable
 import app.models.ExpenseTable
 // Balance case class
 case class Balance(
-    id: Option[Long] = None,
-    from: Long, // who owes
-    to: Long, // whom they owe
-    amount: Double,
-    expenseId: Long
+  id: Option[Long] = None,
+  from: Long, // who owes
+  to: Long, // whom they owe
+  amount: Double,
+  expenseId: Long
 )
 
 //JSON formatter

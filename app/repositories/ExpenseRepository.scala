@@ -7,8 +7,8 @@ import slick.jdbc.MySQLProfile.api._
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class ExpenseRepository @Inject() (dbConfigProvider: DatabaseConfigProvider)(
-    implicit ec: ExecutionContext
+class ExpenseRepository @Inject() (dbConfigProvider: DatabaseConfigProvider)(implicit
+  ec: ExecutionContext
 ) {
 
   private val db = dbConfigProvider.get.db

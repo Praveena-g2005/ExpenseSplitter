@@ -1,8 +1,8 @@
 package app.services
 
-import app.models.{User, RefreshToken}
-import app.repositories.{UserRepository, RefreshTokenRepository}
-import app.utils.{PasswordHasher, JwtUtil}
+import app.models.{RefreshToken, User}
+import app.repositories.{RefreshTokenRepository, UserRepository}
+import app.utils.{JwtUtil, PasswordHasher}
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 import play.api.Logging
@@ -14,9 +14,9 @@ case class LoginResult(tokens: AuthTokens, user: User)
 
 @Singleton
 class AuthService @Inject() (
-    userRepository: UserRepository,
-    refreshTokenRepository: RefreshTokenRepository,
-    jwtUtil: JwtUtil
+  userRepository: UserRepository,
+  refreshTokenRepository: RefreshTokenRepository,
+  jwtUtil: JwtUtil
 )(implicit ec: ExecutionContext)
     extends Logging {
 
@@ -24,8 +24,8 @@ class AuthService @Inject() (
   private val accessTokenExpiry = 900 // 15 minutes in seconds
 
   def login(
-      email: String,
-      password: String
+    email: String,
+    password: String
   ): Future[Either[String, LoginResult]] = {
     logger.info(s"Login attempt for email: $email")
 
@@ -70,7 +70,7 @@ class AuthService @Inject() (
   }
 
   def refreshAccessToken(
-      refreshToken: String
+    refreshToken: String
   ): Future[Either[String, String]] = {
     logger.info("Refreshing access token")
 
@@ -99,10 +99,9 @@ class AuthService @Inject() (
     refreshTokenRepository.revokeToken(refreshToken).map(_ > 0)
   }
 
-  def validateAccessToken(token: String): Option[(Long, String)] = {
+  def validateAccessToken(token: String): Option[(Long, String)] =
     jwtUtil
       .validateToken(token)
       .toOption
       .map(claims => (claims.userId, claims.email))
-  }
 }
