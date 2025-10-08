@@ -1,62 +1,98 @@
 package app.services
 
-import play.api.libs.json._
+import app.models.User
 import app.repositories.UserRepository
-import app.models.{User}
-import javax.inject.{Inject,Singleton}
-import scala.concurrent.{ExecutionContext,Future}
-import app.utils.{ValidationFailure,ValidationResult,ValidationSuccess,Validators}
+import app.utils.PasswordHasher
+import app.utils.{
+  ValidationResult,
+  ValidationSuccess,
+  ValidationFailure,
+  Validators
+}
+import javax.inject.{Inject, Singleton}
+import scala.concurrent.{ExecutionContext, Future}
 import play.api.Logging
 
 @Singleton
-class UserService @Inject()(
+class UserService @Inject() (
     userRepository: UserRepository
-)(implicit ec :ExecutionContext) extends Logging{
-    def createUser(name :String, email : String): Future[Either[String , User]] = {
-        logger.info(s"Creating User with $email")
-        Validators.validateName(name) match {
-            case ValidationSuccess => 
-                Validators.validateEmail(email) match{
-                    case ValidationSuccess =>
-                        val sanitizedemail = Validators.sanitizedEmail(email)
-                        userRepository.isEmailexists(sanitizedemail).flatMap{exists =>
-                            if(exists){
-                                logger.info(s"Email Already Exists")
-                                Future.successful(Left(s"Email Already Exists :$sanitizedemail"))
-                            } else{
-                                val user=User(
-                                    id = None,
-                                    name = Validators.sanitizedName(name),
-                                    email = sanitizedemail
-                                )
-                                userRepository.create(user).map{createduser=>
-                                    logger.info(s"user created with User id : ${createduser.id}")
-                                    Right(createduser)
-                                }.recover{
-                                    case ex: Exception =>{
-                                        logger.error("User not created , try again later")
-                                        Left("User not created ,try agian later")
-                                    }
-                                }  
-                            }
-                        }
-                    case ValidationFailure(message) =>
-                        logger.error(s"Email $email is not valide")
-                        Future.successful(Left(message))
+)(implicit ec: ExecutionContext)
+    extends Logging {
+
+  def createUser(
+      name: String,
+      email: String,
+      password: String
+  ): Future[Either[String, User]] = {
+    logger.info(s"Creating user with email: $email")
+
+    Validators.validateName(name) match {
+      case ValidationSuccess =>
+        Validators.validateEmail(email) match {
+          case ValidationSuccess =>
+            validatePassword(password) match {
+              case ValidationSuccess =>
+                val sanitizedEmail = Validators.sanitizeEmail(email)
+                userRepository.isEmailexists(sanitizedEmail).flatMap { exists =>
+                  if (exists) {
+                    logger.warn(s"Email already exists: $sanitizedEmail")
+                    Future.successful(
+                      Left(s"Email $sanitizedEmail is already registered")
+                    )
+                  } else {
+                    val passwordHash = PasswordHasher.hash(password)
+                    val user = User(
+                      id = None,
+                      name = Validators.sanitizeName(name),
+                      email = sanitizedEmail,
+                      passwordHash = passwordHash
+                    )
+                    userRepository
+                      .create(user)
+                      .map { createdUser =>
+                        logger
+                          .info(s"User created successfully: ${createdUser.id}")
+                        Right(createdUser)
+                      }
+                      .recover { case ex: Exception =>
+                        logger
+                          .error(s"Failed to create user: ${ex.getMessage}", ex)
+                        Left("Failed to create user. Please try again.")
+                      }
+                  }
                 }
-            case ValidationFailure(message) =>
-                logger.error(s"Invalide name : $name")
+              case ValidationFailure(message) =>
                 Future.successful(Left(message))
+            }
+          case ValidationFailure(message) =>
+            logger.warn(s"Email validation failed: $message")
+            Future.successful(Left(message))
         }
+      case ValidationFailure(message) =>
+        logger.warn(s"Name validation failed: $message")
+        Future.successful(Left(message))
     }
+  }
 
-    def getAllUser() :Future[List[User]] ={
-        logger.info("Getting all the users")
-        userRepository.findAll()
+  private def validatePassword(password: String): ValidationResult = {
+    if (password.length < 8) {
+      ValidationFailure("Password must be at least 8 characters")
+    } else if (!password.exists(_.isUpper)) {
+      ValidationFailure("Password must contain at least one uppercase letter")
+    } else if (!password.exists(_.isDigit)) {
+      ValidationFailure("Password must contain at least one number")
+    } else {
+      ValidationSuccess
     }
+  }
 
-    def getUserById(id :Long): Future[Option[User]] ={
-        logger.info(s"User with id :$id")
-        userRepository.findById(id)
-    }
+  def getAllUser(): Future[List[User]] = {
+    logger.info("Getting all users")
+    userRepository.findAll()
+  }
+
+  def getUserById(id: Long): Future[Option[User]] = {
+    logger.info(s"User with id: $id")
+    userRepository.findById(id)
+  }
 }

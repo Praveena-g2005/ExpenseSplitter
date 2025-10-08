@@ -2,8 +2,10 @@
 
 CREATE TABLE IF NOT EXISTS users (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
-  name VARCHAR(255) NOT NULL UNIQUE,
-  email VARCHAR(255) NOT NULL UNIQUE
+  name VARCHAR(255) NOT NULL,
+  email VARCHAR(255) NOT NULL UNIQUE,
+  password_hash VARCHAR(255),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS expenses (
@@ -15,7 +17,7 @@ CREATE TABLE IF NOT EXISTS expenses (
   FOREIGN KEY (paid_by) REFERENCES users(id)
 );
 
-CREATE TABLE expense_participants (
+CREATE TABLE IF NOT EXISTS expense_participants (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
   expense_id BIGINT NOT NULL,
   user_id BIGINT NOT NULL,
@@ -35,18 +37,34 @@ CREATE TABLE IF NOT EXISTS balances (
   FOREIGN KEY (to_user) REFERENCES users(id),
   FOREIGN KEY (expense_id) REFERENCES expenses(id)
 );
+
 CREATE TABLE IF NOT EXISTS notifications (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
-  expense_id BIGINT NOT NULL ,
+  expense_id BIGINT NOT NULL,
   recipient BIGINT NOT NULL,
   message TEXT NOT NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (expense_id) REFERENCES expenses(id),
   FOREIGN KEY (recipient) REFERENCES users(id)
 );
+
+CREATE TABLE IF NOT EXISTS refresh_tokens (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  user_id BIGINT NOT NULL,
+  token VARCHAR(255) NOT NULL UNIQUE,
+  expires_at TIMESTAMP NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  revoked BOOLEAN DEFAULT FALSE,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  INDEX idx_token (token),
+  INDEX idx_user_id (user_id)
+);
+
 # --- !Downs
+
 DROP TABLE IF EXISTS balances;
-DROP TABLE IF EXISTS expenses;
 DROP TABLE IF EXISTS notifications;
-DROP TABLE IF EXISTS users;
 DROP TABLE IF EXISTS expense_participants;
+DROP TABLE IF EXISTS expenses;
+DROP TABLE IF EXISTS refresh_tokens;
+DROP TABLE IF EXISTS users;

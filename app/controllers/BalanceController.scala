@@ -8,165 +8,227 @@ import play.api.libs.json._
 import scala.concurrent.{ExecutionContext, Future}
 import play.api.Logging
 import app.dtos.{BalanceListResponse, UserBalanceResponse, BalanceErrorResponse}
-import app.dtos.BalanceErrorResponse._
-// Response case classes
+import app.utils.{AuthAction, AuthenticatedRequest} // Add this
 
 @Singleton
 class BalanceController @Inject() (
     cc: ControllerComponents,
-    balanceService: BalanceService
+    balanceService: BalanceService,
+    authAction: AuthAction // Add this
 )(implicit ec: ExecutionContext)
     extends AbstractController(cc)
     with Logging {
 
-  /** GET /balances
-    */
-  def getAllBalances(): Action[AnyContent] = Action.async {
-    logger.info("Fetching all balances")
+  // GET /balances - Protected
+  def getAllBalances(): Action[AnyContent] = authAction.async {
+    request: AuthenticatedRequest[AnyContent] =>
+      logger.info(s"Fetching all balances for user: ${request.user.id}")
 
-    balanceService
-      .getAllBalances()
-      .map { balances =>
+      // Only return balances involving this user
+      val userId = request.user.id.get
+      for {
+        owingBalances <- balanceService.getUnsettledBalances(userId)
+        owedBalances <- balanceService.getIncomingBalances(userId)
+      } yield {
+        val allUserBalances = (owingBalances ++ owedBalances).distinctBy(_.id)
         Ok(
           Json.toJson(
             BalanceListResponse(
-              balances = balances,
-              count = balances.length
+              balances = allUserBalances,
+              count = allUserBalances.length
             )
-          )
-        )
-      }
-      .recover { case ex: Exception =>
-        logger.error(s"Error fetching balances: ${ex.getMessage}", ex)
-        InternalServerError(
-          Json.toJson(BalanceErrorResponse(false, "Error fetching balances"))
-        )
-      }
-  }
-
-  /** GET /balances/user/:userId Get complete balance summary for a user - who
-    * they owe and who owes them
-    */
-  def getUserBalances(userId: Long): Action[AnyContent] = Action.async {
-    logger.info(s"Fetching balance summary for user: $userId")
-
-    balanceService
-      .getUserBalanceSummary(userId)
-      .map { summary =>
-        Ok(
-          Json.toJson(
-            UserBalanceResponse(
-              userId = userId,
-              totalOwedByUser = summary.amountOwing,
-              totalOwedToUser = summary.amountOwed,
-              netBalance = summary.netBalance,
-              relationships = List()
-            )
-          )
-        )
-      }
-      .recover { case ex: Exception =>
-        logger.error(
-          s"Error fetching balance summary for user $userId: ${ex.getMessage}",
-          ex
-        )
-        InternalServerError(
-          Json.toJson(
-            BalanceErrorResponse(false, "Error fetching user balance summary")
           )
         )
       }
   }
 
-  /** GET /balances/user/:userId/owes Get what this user owes to others
-    * (outgoing balances)
-    */
-  def getUserOwingBalances(userId: Long): Action[AnyContent] = Action.async {
-    logger.info(s"Fetching outgoing balances for user: $userId")
+  // GET /balances/user/:userId - Protected
+  def getUserBalances(userId: Long): Action[AnyContent] = authAction.async {
+    request: AuthenticatedRequest[AnyContent] =>
+      logger.info(s"Fetching balance summary for user: $userId")
 
-    balanceService
-      .getUnsettledBalances(userId)
-      .map { balances =>
-        Ok(
-          Json.toJson(
-            BalanceListResponse(
-              balances = balances,
-              count = balances.length
+      // Authorization: Users can only view their own balances
+      if (userId != request.user.id.get) {
+        Future.successful(
+          Forbidden(
+            Json.toJson(
+              BalanceErrorResponse(false, "You can only view your own balances")
             )
           )
         )
-      }
-      .recover { case ex: Exception =>
-        logger.error(
-          s"Error fetching owing balances for user $userId: ${ex.getMessage}",
-          ex
-        )
-        InternalServerError(
-          Json.toJson(
-            BalanceErrorResponse(false, "Error fetching owing balances")
-          )
-        )
+      } else {
+        balanceService
+          .getUserBalanceSummary(userId)
+          .map { summary =>
+            Ok(
+              Json.toJson(
+                UserBalanceResponse(
+                  userId = userId,
+                  totalOwedByUser = summary.amountOwing,
+                  totalOwedToUser = summary.amountOwed,
+                  netBalance = summary.netBalance,
+                  relationships = List()
+                )
+              )
+            )
+          }
+          .recover { case ex: Exception =>
+            logger.error(
+              s"Error fetching balance summary for user $userId: ${ex.getMessage}",
+              ex
+            )
+            InternalServerError(
+              Json.toJson(
+                BalanceErrorResponse(
+                  false,
+                  "Error fetching user balance summary"
+                )
+              )
+            )
+          }
       }
   }
 
-  /** GET /balances/user/:userId/owed Get what others owe to this user (incoming
-    * balances)
-    */
-  def getUserOwedBalances(userId: Long): Action[AnyContent] = Action.async {
-    logger.info(s"Fetching incoming balances for user: $userId")
+  // GET /balances/user/:userId/owes - Protected
+  def getUserOwingBalances(userId: Long): Action[AnyContent] =
+    authAction.async { request: AuthenticatedRequest[AnyContent] =>
+      logger.info(s"Fetching outgoing balances for user: $userId")
 
-    balanceService
-      .getIncomingBalances(userId)
-      .map { balances =>
-        Ok(
-          Json.toJson(
-            BalanceListResponse(
-              balances = balances,
-              count = balances.length
+      if (userId != request.user.id.get) {
+        Future.successful(
+          Forbidden(
+            Json.toJson(
+              BalanceErrorResponse(false, "You can only view your own balances")
             )
           )
         )
+      } else {
+        balanceService
+          .getUnsettledBalances(userId)
+          .map { balances =>
+            Ok(
+              Json.toJson(
+                BalanceListResponse(
+                  balances = balances,
+                  count = balances.length
+                )
+              )
+            )
+          }
+          .recover { case ex: Exception =>
+            logger.error(
+              s"Error fetching owing balances for user $userId: ${ex.getMessage}",
+              ex
+            )
+            InternalServerError(
+              Json.toJson(
+                BalanceErrorResponse(false, "Error fetching owing balances")
+              )
+            )
+          }
       }
-      .recover { case ex: Exception =>
-        logger.error(
-          s"Error fetching owed balances for user $userId: ${ex.getMessage}",
-          ex
-        )
-        InternalServerError(
-          Json
-            .toJson(BalanceErrorResponse(false, "Error fetching owed balances"))
-        )
-      }
-  }
+    }
 
-  /** GET /balances/expense/:expenseId Get all balances created from a specific
-    * expense
-    */
-  def getExpenseBalances(expenseId: Long): Action[AnyContent] = Action.async {
-    logger.info(s"Fetching balances for expense: $expenseId")
+  // GET /balances/user/:userId/owed - Protected
+  def getUserOwedBalances(userId: Long): Action[AnyContent] = authAction.async {
+    request: AuthenticatedRequest[AnyContent] =>
+      logger.info(s"Fetching incoming balances for user: $userId")
 
-    balanceService
-      .getExpenseBalances(expenseId)
-      .map { balances =>
-        Ok(
-          Json.toJson(
-            BalanceListResponse(
-              balances = balances,
-              count = balances.length
+      if (userId != request.user.id.get) {
+        Future.successful(
+          Forbidden(
+            Json.toJson(
+              BalanceErrorResponse(false, "You can only view your own balances")
             )
           )
         )
-      }
-      .recover { case ex: Exception =>
-        logger.error(
-          s"Error fetching balances for expense $expenseId: ${ex.getMessage}",
-          ex
-        )
-        InternalServerError(
-          Json.toJson(
-            BalanceErrorResponse(false, "Error fetching expense balances")
-          )
-        )
+      } else {
+        balanceService
+          .getIncomingBalances(userId)
+          .map { balances =>
+            Ok(
+              Json.toJson(
+                BalanceListResponse(
+                  balances = balances,
+                  count = balances.length
+                )
+              )
+            )
+          }
+          .recover { case ex: Exception =>
+            logger.error(
+              s"Error fetching owed balances for user $userId: ${ex.getMessage}",
+              ex
+            )
+            InternalServerError(
+              Json.toJson(
+                BalanceErrorResponse(false, "Error fetching owed balances")
+              )
+            )
+          }
       }
   }
+
+  // GET /balances/expense/:expenseId - Protected
+  def getExpenseBalances(expenseId: Long): Action[AnyContent] =
+    authAction.async { request: AuthenticatedRequest[AnyContent] =>
+      logger.info(s"Fetching balances for expense: $expenseId")
+
+      balanceService
+        .getExpenseBalances(expenseId)
+        .flatMap { balances =>
+          if (balances.isEmpty) {
+            Future.successful(
+              NotFound(
+                Json.toJson(
+                  BalanceErrorResponse(
+                    false,
+                    s"No balances found for expense $expenseId"
+                  )
+                )
+              )
+            )
+          } else {
+            // Authorization: Check if user is involved in any of these balances
+            val userId = request.user.id.get
+            val isInvolved =
+              balances.exists(b => b.from == userId || b.to == userId)
+
+            if (isInvolved) {
+              Future.successful(
+                Ok(
+                  Json.toJson(
+                    BalanceListResponse(
+                      balances = balances,
+                      count = balances.length
+                    )
+                  )
+                )
+              )
+            } else {
+              Future.successful(
+                Forbidden(
+                  Json.toJson(
+                    BalanceErrorResponse(
+                      false,
+                      "You don't have access to these balances"
+                    )
+                  )
+                )
+              )
+            }
+          }
+        }
+        .recover { case ex: Exception =>
+          logger.error(
+            s"Error fetching balances for expense $expenseId: ${ex.getMessage}",
+            ex
+          )
+          InternalServerError(
+            Json.toJson(
+              BalanceErrorResponse(false, "Error fetching expense balances")
+            )
+          )
+        }
+    }
 }

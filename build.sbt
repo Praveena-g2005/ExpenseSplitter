@@ -18,6 +18,10 @@ libraryDependencies ++= Seq(
   "com.thesamet.scalapb" %% "scalapb-runtime-grpc" % "0.11.13",
   "io.grpc" % "grpc-netty-shaded" % "1.62.2",
 
+  // Authentication
+  "com.github.t3hnar" %% "scala-bcrypt" % "4.3.0",
+  "com.auth0" % "java-jwt" % "4.4.0",
+
   // Test dependencies
   "org.scalatestplus.play" %% "scalatestplus-play" % "7.0.2" % Test,
   "org.scalatest"          %% "scalatest"          % "3.2.19" % Test,

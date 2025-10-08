@@ -2,7 +2,12 @@ package app.services
 
 import play.api.libs.json._
 import app.models.{Expense, Participants, Balance, UserTable}
-import app.repositories.{ExpenseRepository, ParticipantRepository, BalanceRepository, UserRepository}
+import app.repositories.{
+  ExpenseRepository,
+  ParticipantRepository,
+  BalanceRepository,
+  UserRepository
+}
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 import play.api.Logging
@@ -12,46 +17,53 @@ import app.models.User
 case class ParticipantShare(userId: Long, shareAmount: Double)
 case class ExpenseCreationResult(expense: Expense, balances: List[Balance])
 case class ExpenseDetails(
-  expense: Expense,
-  participants: List[Participants],
-  balances: List[Balance],
-  participantUsers: List[User]
+    expense: Expense,
+    participants: List[Participants],
+    balances: List[Balance],
+    participantUsers: List[User]
 )
 case class UserExpenseStats(
-  totalPaid: Double,
-  expenseCount: Int,
-  totalOwedByUser: Double,
-  totalOwedToUser: Double,
-  netBalance: Double
+    totalPaid: Double,
+    expenseCount: Int,
+    totalOwedByUser: Double,
+    totalOwedToUser: Double,
+    netBalance: Double
 )
 
 object ExpenseServiceFormats {
   implicit val userTableFormat: OFormat[User] = Json.format[User]
-  implicit val participantShareFormat: OFormat[ParticipantShare] = Json.format[ParticipantShare]
-  implicit val expenseDetailsFormat: OFormat[ExpenseDetails] = Json.format[ExpenseDetails]
+  implicit val participantShareFormat: OFormat[ParticipantShare] =
+    Json.format[ParticipantShare]
+  implicit val expenseDetailsFormat: OFormat[ExpenseDetails] =
+    Json.format[ExpenseDetails]
 }
 
 @Singleton
-class ExpenseService @Inject()(
-  expenseRepository: ExpenseRepository,
-  participantRepository: ParticipantRepository,
-  balanceRepository: BalanceRepository,
-  userRepository: UserRepository
-)(implicit ec: ExecutionContext) extends Logging {
+class ExpenseService @Inject() (
+    expenseRepository: ExpenseRepository,
+    participantRepository: ParticipantRepository,
+    balanceRepository: BalanceRepository,
+    userRepository: UserRepository
+)(implicit ec: ExecutionContext)
+    extends Logging {
 
-  import ExpenseServiceFormats._  // bring JSON implicits into scope
+  import ExpenseServiceFormats._ // bring JSON implicits into scope
 
   /** Creates an expense and calculates balances */
   def createExpense(
-    description: String,
-    amount: Double,
-    paidBy: Long,
-    participants: List[ParticipantShare]
+      description: String,
+      amount: Double,
+      paidBy: Long,
+      participants: List[ParticipantShare]
   ): Future[ExpenseCreationResult] = {
 
     val totalShares = participants.map(_.shareAmount).sum
     if (Math.abs(totalShares - amount) > 0.01) {
-      Future.failed(new IllegalArgumentException(s"Participant shares ($totalShares) don't match expense amount ($amount)"))
+      Future.failed(
+        new IllegalArgumentException(
+          s"Participant shares ($totalShares) don't match expense amount ($amount)"
+        )
+      )
     } else {
       createExpenseTransaction(description, amount, paidBy, participants)
     }
@@ -59,49 +71,61 @@ class ExpenseService @Inject()(
 
   /** Helper method for equal split expenses */
   def createEqualSplitExpense(
-    description: String,
-    amount: Double,
-    paidBy: Long,
-    participantIds: List[Long]
+      description: String,
+      amount: Double,
+      paidBy: Long,
+      participantIds: List[Long]
   ): Future[ExpenseCreationResult] = {
     val sharePerPerson = amount / participantIds.length
-    val participants = participantIds.map(id => ParticipantShare(id, sharePerPerson))
+    val participants =
+      participantIds.map(id => ParticipantShare(id, sharePerPerson))
     createExpense(description, amount, paidBy, participants)
   }
 
   def getAllExpenses(): Future[List[Expense]] = expenseRepository.findAll()
 
   private def createExpenseTransaction(
-    description: String,
-    amount: Double,
-    paidBy: Long,
-    participants: List[ParticipantShare]
+      description: String,
+      amount: Double,
+      paidBy: Long,
+      participants: List[ParticipantShare]
   ): Future[ExpenseCreationResult] = {
 
-    val expense = Expense(id = None, description = description, amount = amount, paidBy = paidBy)
+    val expense = Expense(
+      id = None,
+      description = description,
+      amount = amount,
+      paidBy = paidBy
+    )
 
     for {
       createdExpense <- expenseRepository.create(expense)
 
-      participantRecords = participants.map(p => Participants(
-        id = None,
-        expenseid = createdExpense.id.get,
-        userid = p.userId,
-        sharedamt = p.shareAmount
-      ))
+      participantRecords = participants.map(p =>
+        Participants(
+          id = None,
+          expenseid = createdExpense.id.get,
+          userid = p.userId,
+          sharedamt = p.shareAmount
+        )
+      )
       _ <- Future.sequence(participantRecords.map(participantRepository.create))
 
       balanceRecords = participants
         .filter(_.userId != paidBy)
-        .map(p => Balance(
-          id = None,
-          from = p.userId,
-          to = paidBy,
-          amount = p.shareAmount,
-          expenseId = createdExpense.id.get
-        ))
+        .map(p =>
+          Balance(
+            id = None,
+            from = p.userId,
+            to = paidBy,
+            amount = p.shareAmount,
+            expenseId = createdExpense.id.get
+          )
+        )
 
-      createdBalances <- Future.sequence(balanceRecords.map(balanceRepository.create))
+      createdBalances <- Future.sequence(
+        balanceRecords.map(balanceRepository.create)
+      )
 
     } yield ExpenseCreationResult(createdExpense, createdBalances)
   }
@@ -136,7 +160,9 @@ class ExpenseService @Inject()(
               val userIds = participants.map(_.userid)
               userRepository.findByIds(userIds)
             }
-          } yield Some(ExpenseDetails(exp, participants, balances, participantUsers))
+          } yield Some(
+            ExpenseDetails(exp, participants, balances, participantUsers)
+          )
         case None => Future.successful(None)
       }
     } yield expense

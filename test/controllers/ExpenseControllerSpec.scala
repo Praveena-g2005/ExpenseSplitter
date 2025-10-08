@@ -54,8 +54,8 @@ class ExpenseControllerSpec extends PlaySpec with MockitoSugar {
 
       val result = controller.createExpense.apply(request)
       println("Response status: " + status(result))
-println("Response body: " + contentAsString(result))
-println("Response contentType: " + contentType(result))
+      println("Response body: " + contentAsString(result))
+      println("Response contentType: " + contentType(result))
 
       status(result) mustBe OK
       contentType(result) mustBe Some("application/json")

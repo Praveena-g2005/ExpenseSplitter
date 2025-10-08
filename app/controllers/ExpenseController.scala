@@ -12,111 +12,125 @@ import app.dtos.{
   ExpenseListResponse,
   CreateExpenseRequest,
   CreateExpenseResponse,
-  BalanceRelationshipResponse,
   SimpleResponse
 }
+import app.utils.{AuthAction, AuthenticatedRequest}
 
 @Singleton
 class ExpenseController @Inject() (
     cc: ControllerComponents,
-    expenseService: ExpenseService
+    expenseService: ExpenseService,
+    authAction: AuthAction
 )(implicit ec: ExecutionContext)
     extends AbstractController(cc)
     with Logging {
+
   import ExpenseServiceFormats._
 
-  def createExpense(): Action[JsValue] = Action.async(parse.json) { request =>
-    logger.info(s"Creating expense with request: ${request.body}")
+  // POST /expenses
+  def createExpense(): Action[JsValue] = authAction.async(parse.json) {
+    request: AuthenticatedRequest[JsValue] =>
+      logger.info(s"Creating expense for user: ${request.user.id}")
 
-    request.body.validate[CreateExpenseRequest] match {
-      case JsSuccess(expenseRequest, _) =>
-        if (expenseRequest.description.trim.isEmpty) {
-          Future.successful(
-            BadRequest(
-              Json.toJson(
-                ExpenseErrorResponse(false, "Description cannot be empty")
-              )
-            )
-          )
-        } else if (expenseRequest.amount <= 0) {
-          Future.successful(
-            BadRequest(
-              Json.toJson(
-                ExpenseErrorResponse(false, "Amount must be greater than 0")
-              )
-            )
-          )
-        } else if (expenseRequest.participants.isEmpty) {
-          Future.successful(
-            BadRequest(
-              Json.toJson(
-                ExpenseErrorResponse(
-                  false,
-                  "At least one participant is required"
-                )
-              )
-            )
-          )
-        } else {
-          expenseService
-            .createExpense(
-              description = expenseRequest.description,
-              amount = expenseRequest.amount,
-              paidBy = expenseRequest.paidBy,
-              participants = expenseRequest.participants
-            )
-            .map { result =>
-              logger.info(s"Expense created successfully: ${result.expense.id}")
-              Created(
+      request.body.validate[CreateExpenseRequest] match {
+        case JsSuccess(expenseRequest, _) =>
+          if (expenseRequest.paidBy != request.user.id.get) {
+            Future.successful(
+              Forbidden(
                 Json.toJson(
-                  CreateExpenseResponse(
-                    success = true,
-                    message = "Expense created successfully",
-                    expense = Some(result.expense),
-                    balanceCount = Some(result.balances.length)
+                  ExpenseErrorResponse(
+                    false,
+                    "You can only create expenses for yourself"
                   )
                 )
               )
-            }
-            .recover {
-              case ex: IllegalArgumentException =>
-                logger.warn(
-                  s"Validation error creating expense: ${ex.getMessage}"
+            )
+          } else if (expenseRequest.description.trim.isEmpty) {
+            Future.successful(
+              BadRequest(
+                Json.toJson(
+                  ExpenseErrorResponse(false, "Description cannot be empty")
                 )
-                BadRequest(
-                  Json.toJson(ExpenseErrorResponse(false, ex.getMessage))
+              )
+            )
+          } else if (expenseRequest.amount <= 0) {
+            Future.successful(
+              BadRequest(
+                Json.toJson(
+                  ExpenseErrorResponse(false, "Amount must be greater than 0")
                 )
-              case ex: Exception =>
-                logger.error(s"Error creating expense: ${ex.getMessage}", ex)
-                InternalServerError(
-                  Json.toJson(
-                    ExpenseErrorResponse(false, "Internal server error")
+              )
+            )
+          } else if (expenseRequest.participants.isEmpty) {
+            Future.successful(
+              BadRequest(
+                Json.toJson(
+                  ExpenseErrorResponse(
+                    false,
+                    "At least one participant is required"
                   )
                 )
-            }
-        }
+              )
+            )
+          } else {
+            expenseService
+              .createExpense(
+                description = expenseRequest.description,
+                amount = expenseRequest.amount,
+                paidBy = expenseRequest.paidBy,
+                participants = expenseRequest.participants
+              )
+              .map { result =>
+                logger.info(
+                  s"Expense created successfully: ${result.expense.id}"
+                )
+                Created(
+                  Json.toJson(
+                    CreateExpenseResponse(
+                      success = true,
+                      message = "Expense created successfully",
+                      expense = Some(result.expense),
+                      balanceCount = Some(result.balances.length)
+                    )
+                  )
+                )
+              }
+              .recover {
+                case ex: IllegalArgumentException =>
+                  logger.warn(
+                    s"Validation error creating expense: ${ex.getMessage}"
+                  )
+                  BadRequest(
+                    Json.toJson(ExpenseErrorResponse(false, ex.getMessage))
+                  )
+                case ex: Exception =>
+                  logger.error(s"Error creating expense: ${ex.getMessage}", ex)
+                  InternalServerError(
+                    Json.toJson(
+                      ExpenseErrorResponse(false, "Internal server error")
+                    )
+                  )
+              }
+          }
 
-      case JsError(errors) =>
-        logger.warn(s"Invalid JSON format: $errors")
-        Future.successful(
-          BadRequest(
-            Json.toJson(ExpenseErrorResponse(false, "Invalid JSON format"))
+        case JsError(errors) =>
+          logger.warn(s"Invalid JSON format: $errors")
+          Future.successful(
+            BadRequest(
+              Json.toJson(ExpenseErrorResponse(false, "Invalid JSON format"))
+            )
           )
-        )
-    }
+      }
   }
 
-  def getAllExpenses(): Action[AnyContent] = Action.async {
-    logger.info("Fetching all expenses")
+  // GET /expenses
+  def getAllExpenses(): Action[AnyContent] = authAction.async { request =>
     expenseService
-      .getAllExpenses()
+      .getUserExpenses(request.user.id.get)
       .map { expenses =>
         Ok(
           Json.toJson(
-            ExpenseListResponse(
-              expenses = expenses,
-              count = expenses.length
-            )
+            ExpenseListResponse(expenses = expenses, count = expenses.length)
           )
         )
       }
@@ -128,80 +142,132 @@ class ExpenseController @Inject() (
       }
   }
 
-  def getExpenseById(id: Long): Action[AnyContent] = Action.async {
-    logger.info(s"Fetching expense details for ID: $id")
-    expenseService
-      .getExpenseDetails(id)
-      .map {
-        case Some(expenseDetails) =>
-          Ok(Json.toJson(expenseDetails))
-        case None =>
-          NotFound(
-            Json.toJson(
-              ExpenseErrorResponse(false, s"Expense with ID $id not found")
-            )
-          )
-      }
-      .recover { case ex: Exception =>
-        logger.error(s"Error fetching expense $id: ${ex.getMessage}", ex)
-        InternalServerError(
-          Json.toJson(
-            ExpenseErrorResponse(false, "Error fetching expense details")
-          )
-        )
-      }
-  }
+  // GET /expenses/:id
+  def getExpenseById(id: Long): Action[AnyContent] = authAction.async {
+    request =>
+      expenseService
+        .getExpenseDetails(id)
+        .map {
+          case Some(expenseDetails) =>
+            val userId = request.user.id.get
+            val isPayer = expenseDetails.expense.paidBy == userId
+            val isParticipant =
+              expenseDetails.participants.exists(_.userid == userId)
 
-  def getExpensesByUser(userId: Long): Action[AnyContent] = Action.async {
-    logger.info(s"Fetching expenses for user: $userId")
-    expenseService
-      .getUserExpenses(userId)
-      .map { expenses =>
-        Ok(
-          Json.toJson(
-            ExpenseListResponse(
-              expenses = expenses,
-              count = expenses.length
+            if (isPayer || isParticipant)
+              Ok(Json.toJson(expenseDetails))
+            else
+              Forbidden(
+                Json.toJson(
+                  ExpenseErrorResponse(
+                    false,
+                    "You don't have access to this expense"
+                  )
+                )
+              )
+          case None =>
+            NotFound(
+              Json.toJson(
+                ExpenseErrorResponse(false, s"Expense with ID $id not found")
+              )
             )
-          )
-        )
-      }
-      .recover { case ex: Exception =>
-        logger.error(
-          s"Error fetching expenses for user $userId: ${ex.getMessage}",
-          ex
-        )
-        InternalServerError(
-          Json
-            .toJson(ExpenseErrorResponse(false, "Error fetching user expenses"))
-        )
-      }
-  }
-
-  def deleteExpense(id: Long): Action[AnyContent] = Action.async {
-    logger.info(s"Deleting expense: $id")
-    expenseService
-      .deleteExpense(id)
-      .map { success =>
-        if (success) {
-          Ok(
+        }
+        .recover { case ex: Exception =>
+          logger.error(s"Error fetching expense $id: ${ex.getMessage}", ex)
+          InternalServerError(
             Json.toJson(
-              SimpleResponse(true, s"Expense $id deleted successfully")
-            )
-          )
-        } else {
-          NotFound(
-            Json.toJson(
-              ExpenseErrorResponse(false, s"Expense with ID $id not found")
+              ExpenseErrorResponse(false, "Error fetching expense details")
             )
           )
         }
-      }
-      .recover { case ex: Exception =>
-        logger.error(s"Error deleting expense $id: ${ex.getMessage}", ex)
-        InternalServerError(
-          Json.toJson(ExpenseErrorResponse(false, "Error deleting expense"))
+  }
+
+  // GET /expenses/user/:userId
+  def getExpensesByUser(userId: Long): Action[AnyContent] = authAction.async {
+    request =>
+      if (userId != request.user.id.get) {
+        Future.successful(
+          Forbidden(
+            Json.toJson(
+              ExpenseErrorResponse(false, "You can only view your own expenses")
+            )
+          )
         )
+      } else {
+        expenseService
+          .getUserExpenses(userId)
+          .map { expenses =>
+            Ok(
+              Json.toJson(
+                ExpenseListResponse(
+                  expenses = expenses,
+                  count = expenses.length
+                )
+              )
+            )
+          }
+          .recover { case ex: Exception =>
+            logger.error(
+              s"Error fetching expenses for user $userId: ${ex.getMessage}",
+              ex
+            )
+            InternalServerError(
+              Json.toJson(
+                ExpenseErrorResponse(false, "Error fetching user expenses")
+              )
+            )
+          }
       }
+  }
+
+  // DELETE /expenses/:id
+  def deleteExpense(id: Long): Action[AnyContent] = authAction.async {
+    request =>
+      expenseService
+        .getExpenseDetails(id)
+        .flatMap {
+          case Some(expenseDetails) =>
+            if (expenseDetails.expense.paidBy == request.user.id.get) {
+              expenseService.deleteExpense(id).map { success =>
+                if (success)
+                  Ok(
+                    Json.toJson(
+                      SimpleResponse(true, s"Expense $id deleted successfully")
+                    )
+                  )
+                else
+                  InternalServerError(
+                    Json.toJson(
+                      ExpenseErrorResponse(false, "Failed to delete expense")
+                    )
+                  )
+              }
+            } else {
+              Future.successful(
+                Forbidden(
+                  Json.toJson(
+                    ExpenseErrorResponse(
+                      false,
+                      "You can only delete your own expenses"
+                    )
+                  )
+                )
+              )
+            }
+          case None =>
+            Future.successful(
+              NotFound(
+                Json.toJson(
+                  ExpenseErrorResponse(false, s"Expense with ID $id not found")
+                )
+              )
+            )
+        }
+        .recover { case ex: Exception =>
+          logger.error(s"Error deleting expense $id: ${ex.getMessage}", ex)
+          InternalServerError(
+            Json.toJson(ExpenseErrorResponse(false, "Error deleting expense"))
+          )
+        }
   }
 }

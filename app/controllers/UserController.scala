@@ -20,7 +20,11 @@ class UserController @Inject() (
     request.body.validate[CreateUserRequest] match {
       case JsSuccess(createrequest, _) =>
         userService
-          .createUser(createrequest.name, createrequest.email)
+          .createUser(
+            createrequest.name,
+            createrequest.email,
+            createrequest.password
+          )
           .map {
             case Right(user) =>
               logger.info(s"user created successfully with ${user.id}")
