@@ -28,9 +28,9 @@ jobs:
         uses: olafurpg/setup-scala@v14
         with:
           java-version: '17'
-          sbt-version: '1.11.4' # use your project sbt version
+          sbt-version: '1.11.4' # match your project sbt version
 
-      - name: Cache sbt dependencies
+      - name: Cache SBT dependencies
         uses: actions/cache@v3
         with:
           path: |
@@ -42,8 +42,8 @@ jobs:
       - name: Run scalafmt check
         run: sbt scalafmtCheckAll
 
-      - name: Compile
+      - name: Compile project
         run: sbt compile
 
-      - name: Run tests using test config
+      - name: Run tests (H2 in-memory DB)
         run: sbt -Dconfig.file=conf/application.test.conf test
