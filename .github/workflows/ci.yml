@@ -21,6 +21,16 @@ jobs:
         distribution: 'temurin'
         cache: 'sbt'
 
+    - name: Cache SBT
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.ivy2/cache
+          ~/.sbt
+        key: ${{ runner.os }}-sbt-${{ hashFiles('**/build.sbt') }}
+        restore-keys: |
+          ${{ runner.os }}-sbt-
+
     - name: Check code formatting
       run: sbt scalafmtCheck
 
@@ -30,10 +40,18 @@ jobs:
     - name: Run tests
       run: sbt test
 
-    # Optional: Upload test results if needed
+    - name: Generate coverage report
+      run: sbt coverageReport
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        files: ./target/scala-2.13/scoverage-report/scoverage.xml
+        fail_ci_if_error: false
+
     - name: Archive test results
       if: always()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v3
       with:
         name: test-results
         path: target/test-reports/
