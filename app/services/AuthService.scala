@@ -1,11 +1,12 @@
 package app.services
 
-import app.models.{RefreshToken, User}
-import app.repositories.{RefreshTokenRepository, UserRepository}
-import app.utils.{JwtUtil, PasswordHasher}
+import app.models.{User, RefreshToken}
+import app.repositories.{UserRepository, RefreshTokenRepository}
+import app.utils.{PasswordHasher, JwtUtil}
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 import play.api.Logging
+import java.sql.Timestamp
 import java.time.LocalDateTime
 import java.util.UUID
 
@@ -13,75 +14,64 @@ case class AuthTokens(accessToken: String, refreshToken: String, expiresIn: Int)
 case class LoginResult(tokens: AuthTokens, user: User)
 
 @Singleton
-class AuthService @Inject() (
+class AuthService @Inject()(
   userRepository: UserRepository,
   refreshTokenRepository: RefreshTokenRepository,
   jwtUtil: JwtUtil
-)(implicit ec: ExecutionContext)
-    extends Logging {
+)(implicit ec: ExecutionContext) extends Logging {
 
   private val refreshTokenExpiry = 7 // days
   private val accessTokenExpiry = 900 // 15 minutes in seconds
 
-  def login(
-    email: String,
-    password: String
-  ): Future[Either[String, LoginResult]] = {
+  def login(email: String, password: String): Future[Either[String, LoginResult]] = {
     logger.info(s"Login attempt for email: $email")
-
+    
     userRepository.findByEmailWithPassword(email).flatMap {
       case Some(user) =>
         if (PasswordHasher.verify(password, user.passwordHash)) {
-          // Revoke old tokens
           refreshTokenRepository.revokeUserTokens(user.id.get).flatMap { _ =>
-            // Create new tokens
             val accessToken = jwtUtil.createAccessToken(user.id.get, user.email)
             val refreshTokenString = UUID.randomUUID().toString
+            
+            // Convert LocalDateTime to Timestamp
+            val expiresAt = Timestamp.valueOf(LocalDateTime.now().plusDays(refreshTokenExpiry))
+            
             val refreshToken = RefreshToken(
               id = None,
               userId = user.id.get,
               token = refreshTokenString,
-              expiresAt = LocalDateTime.now().plusDays(refreshTokenExpiry)
+              expiresAt = expiresAt  // Now using Timestamp
             )
-
+            
             refreshTokenRepository.create(refreshToken).map { _ =>
               logger.info(s"Login successful for user: ${user.id}")
-              Right(
-                LoginResult(
-                  tokens = AuthTokens(
-                    accessToken,
-                    refreshTokenString,
-                    accessTokenExpiry
-                  ),
-                  user = user
-                )
-              )
+              Right(LoginResult(
+                tokens = AuthTokens(accessToken, refreshTokenString, accessTokenExpiry),
+                user = user
+              ))
             }
           }
         } else {
           logger.warn(s"Invalid password for email: $email")
           Future.successful(Left("Invalid email or password"))
         }
-
+      
       case None =>
         logger.warn(s"User not found: $email")
         Future.successful(Left("Invalid email or password"))
     }
   }
 
-  def refreshAccessToken(
-    refreshToken: String
-  ): Future[Either[String, String]] = {
+  def refreshAccessToken(refreshToken: String): Future[Either[String, String]] = {
     logger.info("Refreshing access token")
-
+    
     refreshTokenRepository.isValid(refreshToken).flatMap {
       case true =>
         refreshTokenRepository.findByToken(refreshToken).flatMap {
           case Some(token) =>
             userRepository.findById(token.userId).map {
               case Some(user) =>
-                val newAccessToken =
-                  jwtUtil.createAccessToken(user.id.get, user.email)
+                val newAccessToken = jwtUtil.createAccessToken(user.id.get, user.email)
                 Right(newAccessToken)
               case None =>
                 Left("User not found")
@@ -99,9 +89,7 @@ class AuthService @Inject() (
     refreshTokenRepository.revokeToken(refreshToken).map(_ > 0)
   }
 
-  def validateAccessToken(token: String): Option[(Long, String)] =
-    jwtUtil
-      .validateToken(token)
-      .toOption
-      .map(claims => (claims.userId, claims.email))
+  def validateAccessToken(token: String): Option[(Long, String)] = {
+    jwtUtil.validateToken(token).toOption.map(claims => (claims.userId, claims.email))
+  }
 }
