@@ -191,9 +191,13 @@ http://localhost:9000/
 ## 🔐 Authentication Flow
 
 1.User registers → credentials stored with bcrypt hash.
+
 2.User logs in → receives JWT access token + refresh token.
+
 3.Protected routes (/expenses, /balances) require the Authorization: Bearer <token> header.
+
 4.When the access token expires, user can use /auth/refresh to get a new one.
+
 5.Logout revokes the refresh token in the database.
 
 ## 🚧 Notes
@@ -211,6 +215,7 @@ Add settlements endpoint for payments between users.
 Add notification listing endpoint.
 
 Add role-based access control (RBAC).
+
 ---
 
 ## 🧪 Postman Testing
