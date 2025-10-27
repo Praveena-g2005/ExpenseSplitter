@@ -24,7 +24,6 @@ object RefreshToken {
     }
     def writes(ts: Timestamp): JsValue = JsNumber(ts.getTime)
   }
-  
   implicit val format: OFormat[RefreshToken] = Json.format[RefreshToken]
 }
 

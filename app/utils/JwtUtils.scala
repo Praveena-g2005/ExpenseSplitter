@@ -9,7 +9,7 @@ import play.api.Configuration
 import javax.inject.{Inject, Singleton}
 import scala.util.{Failure, Success, Try}
 
-case class JwtClaims(userId: Long, email: String)
+case class JwtClaims(userId: Long, email: String, role: String)
 
 @Singleton
 class JwtUtil @Inject() (config: Configuration) {
@@ -19,7 +19,7 @@ class JwtUtil @Inject() (config: Configuration) {
   private val accessTokenExpiry =
     config.get[Int]("jwt.access-token-expiry") // seconds
 
-  def createAccessToken(userId: Long, email: String): String = {
+  def createAccessToken(userId: Long, email: String , role: String ): String = {
     val now = Instant.now()
     val expiry = now.plusSeconds(accessTokenExpiry.toLong)
 
@@ -27,6 +27,7 @@ class JwtUtil @Inject() (config: Configuration) {
       .create()
       .withSubject(userId.toString)
       .withClaim("email", email)
+      .withClaim("role" , role)
       .withIssuedAt(Date.from(now))
       .withExpiresAt(Date.from(expiry))
       .sign(algorithm)
@@ -38,6 +39,7 @@ class JwtUtil @Inject() (config: Configuration) {
       val decoded = verifier.verify(token)
       val userId = decoded.getSubject.toLong
       val email = decoded.getClaim("email").asString()
-      JwtClaims(userId, email)
+      val role = decoded.getClaim("role").asString()
+      JwtClaims(userId, email , role)
     }
 }

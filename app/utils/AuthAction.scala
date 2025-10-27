@@ -33,9 +33,9 @@ class AuthAction @Inject() (
     extractToken(request) match {
       case Some(token) =>
         logger.info(s"AuthAction: Token found, validating...")
-        authService.validateAccessToken(token) match {
-          case Some((userId, email)) =>
-            logger.info(s"AuthAction: Token valid for user $userId ($email)")
+        authService.validateAccessToken(token).flatMap {
+          case Some((userId, email ,role)) =>
+            logger.info(s"AuthAction: Token valid for user $userId ($email) with role $role")
             userRepository.findById(userId).flatMap {
               case Some(user) =>
                 logger.info(s"AuthAction: User found, proceeding with request")
@@ -69,6 +69,7 @@ class AuthAction @Inject() (
       if (authHeader.startsWith("Bearer ")) {
         Some(authHeader.substring(7))
       } else {
+
         logger.warn(
           s"AuthAction: Authorization header doesn't start with 'Bearer '"
         )

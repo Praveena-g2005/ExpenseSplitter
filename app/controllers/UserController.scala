@@ -8,10 +8,14 @@ import play.api.Logging
 import play.api.mvc._
 import scala.concurrent.{ExecutionContext, Future}
 import app.dtos.CreateUserRequest._
+import app.utils.{AuthAction, AdminAction, AuthenticatedRequest}
+
 @Singleton
 class UserController @Inject() (
   userService: UserService,
-  cc: ControllerComponents
+  cc: ControllerComponents,
+  authAction: AuthAction,      
+  adminAction: AdminAction  
 )(implicit ec: ExecutionContext)
     extends AbstractController(cc)
     with Logging {
@@ -56,7 +60,8 @@ class UserController @Inject() (
     }
   }
 
-  def getAllUsers(): Action[AnyContent] = Action.async {
+  def getAllUsers(): Action[AnyContent] = adminAction.async {
+    request: AuthenticatedRequest[AnyContent]=>
     logger.info(s"Get all user Request received")
     userService
       .getAllUser()
@@ -71,7 +76,8 @@ class UserController @Inject() (
       }
   }
 
-  def getUserById(id: Long): Action[AnyContent] = Action.async {
+  def getUserById(id: Long): Action[AnyContent] = adminAction.async {
+    request: AuthenticatedRequest[AnyContent] =>
     logger.info(s"get user by id request received")
     userService
       .getUserById(id)

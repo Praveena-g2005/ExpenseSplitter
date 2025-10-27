@@ -12,7 +12,8 @@ case class CreateUserRequest(
 case class UserResponse(
   id: Long,
   name: String,
-  email: String
+  email: String,
+  role :String
 )
 
 object CreateUserRequest {
@@ -28,7 +29,8 @@ object UserResponse {
         throw new IllegalStateException("User must have an ID")
       ),
       name = user.name,
-      email = user.email
+      email = user.email,
+      role = user.role.toString
     )
 }
 

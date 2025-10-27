@@ -1,7 +1,7 @@
 package app.controllers
 
 import app.services.{ExpenseService, ExpenseServiceFormats, ParticipantShare}
-import app.models.Expense
+import app.models.{Expense,UserRole}
 import javax.inject.{Inject, Singleton}
 import play.api.mvc._
 import play.api.libs.json._
@@ -178,7 +178,7 @@ class ExpenseController @Inject() (
 
   // GET /expenses/user/:userId
   def getExpensesByUser(userId: Long): Action[AnyContent] = authAction.async { request =>
-    if (userId != request.user.id.get) {
+    if (request.user.role != UserRole.ADMIN && userId != request.user.id.get) {
       Future.successful(
         Forbidden(
           Json.toJson(

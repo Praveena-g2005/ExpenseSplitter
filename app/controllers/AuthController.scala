@@ -6,6 +6,7 @@ import play.api.mvc._
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 import play.api.Logging
+import app.utils.{AuthAction, AuthenticatedRequest}
 
 case class RegisterRequest(name: String, email: String, password: String)
 object RegisterRequest {
@@ -22,17 +23,23 @@ object RefreshRequest {
   implicit val format: OFormat[RefreshRequest] = Json.format[RefreshRequest]
 }
 
+case class LogoutRequest(refreshToken: String, accessToken: Option[String] = None)
+object LogoutRequest {
+  implicit val format: OFormat[LogoutRequest] = Json.format[LogoutRequest]
+}
+
 case class LoginResponse(
   accessToken: String,
   refreshToken: String,
   expiresIn: Int,
   user: UserInfo
 )
+
 object LoginResponse {
   implicit val format: OFormat[LoginResponse] = Json.format[LoginResponse]
 }
 
-case class UserInfo(id: Long, name: String, email: String)
+case class UserInfo(id: Long, name: String, email: String, role: String)
 object UserInfo {
   implicit val format: OFormat[UserInfo] = Json.format[UserInfo]
 }
@@ -42,7 +49,7 @@ object RefreshResponse {
   implicit val format: OFormat[RefreshResponse] = Json.format[RefreshResponse]
 }
 
-case class ErrorResponse(error: String)
+case class ErrorResponse (error: String)
 object ErrorResponse {
   implicit val format: OFormat[ErrorResponse] = Json.format[ErrorResponse]
 }
@@ -51,7 +58,8 @@ object ErrorResponse {
 class AuthController @Inject() (
   cc: ControllerComponents,
   userService: UserService,
-  authService: AuthService
+  authService: AuthService,
+  authAction: AuthAction
 )(implicit ec: ExecutionContext)
     extends AbstractController(cc)
     with Logging {
@@ -76,7 +84,8 @@ class AuthController @Inject() (
                   "user" -> Json.obj(
                     "id" -> user.id,
                     "name" -> user.name,
-                    "email" -> user.email
+                    "email" -> user.email,
+                    "role" -> user.role.toString
                   )
                 )
               )
@@ -108,7 +117,8 @@ class AuthController @Inject() (
                   user = UserInfo(
                     id = loginResult.user.id.get,
                     name = loginResult.user.name,
-                    email = loginResult.user.email
+                    email = loginResult.user.email,
+                    role = loginResult.user.role.toString
                   )
                 )
               )
@@ -142,16 +152,29 @@ class AuthController @Inject() (
     }
   }
 
-  def logout(): Action[JsValue] = Action.async(parse.json) { request =>
-    logger.info("Logout request received")
+  def logout(): Action[JsValue] = authAction.async(parse.json) { request: AuthenticatedRequest[JsValue] =>
+    logger.info(s"Logout request received for user: ${request.user.id}")
 
-    request.body.validate[RefreshRequest] match {
+    request.body.validate[LogoutRequest] match {
       case JsSuccess(logoutRequest, _) =>
-        authService.logout(logoutRequest.refreshToken).map { success =>
-          if (success) {
-            Ok(Json.obj("message" -> "Logged out successfully"))
-          } else {
-            BadRequest(Json.toJson(ErrorResponse("Invalid refresh token")))
+        // Revoke refresh token
+        authService.logout(logoutRequest.refreshToken).flatMap { refreshSuccess =>
+          // Also revoke access token if provided
+          logoutRequest.accessToken match {
+            case Some(accessToken) =>
+              authService.revokeAccessToken(accessToken, request.user.id.get).map { accessSuccess =>
+                if (refreshSuccess || accessSuccess) {
+                  Ok(Json.obj("message" -> "Logged out successfully", "tokensRevoked" -> true))
+                } else {
+                  BadRequest(Json.toJson(ErrorResponse("Failed to revoke tokens")))
+                }
+              }
+            case None =>
+              if (refreshSuccess) {
+                Future.successful(Ok(Json.obj("message" -> "Logged out successfully", "tokensRevoked" -> true)))
+              } else {
+                Future.successful(BadRequest(Json.toJson(ErrorResponse("Invalid refresh token"))))
+              }
           }
         }
       case JsError(_) =>

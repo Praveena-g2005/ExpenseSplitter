@@ -1,7 +1,7 @@
 package app.services
 
-import app.models.{User, RefreshToken}
-import app.repositories.{UserRepository, RefreshTokenRepository}
+import app.models.{User, RefreshToken, RevokedToken}
+import app.repositories.{UserRepository, RefreshTokenRepository, RevokedTokenRepository}
 import app.utils.{PasswordHasher, JwtUtil}
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
@@ -17,6 +17,7 @@ case class LoginResult(tokens: AuthTokens, user: User)
 class AuthService @Inject()(
   userRepository: UserRepository,
   refreshTokenRepository: RefreshTokenRepository,
+  revokedTokenRepository: RevokedTokenRepository,
   jwtUtil: JwtUtil
 )(implicit ec: ExecutionContext) extends Logging {
 
@@ -29,18 +30,18 @@ class AuthService @Inject()(
     userRepository.findByEmailWithPassword(email).flatMap {
       case Some(user) =>
         if (PasswordHasher.verify(password, user.passwordHash)) {
+          // Revoke all existing tokens for this user
           refreshTokenRepository.revokeUserTokens(user.id.get).flatMap { _ =>
-            val accessToken = jwtUtil.createAccessToken(user.id.get, user.email)
+            val accessToken = jwtUtil.createAccessToken(user.id.get, user.email, user.role.toString)
             val refreshTokenString = UUID.randomUUID().toString
             
-            // Convert LocalDateTime to Timestamp
             val expiresAt = Timestamp.valueOf(LocalDateTime.now().plusDays(refreshTokenExpiry))
             
             val refreshToken = RefreshToken(
               id = None,
               userId = user.id.get,
               token = refreshTokenString,
-              expiresAt = expiresAt  // Now using Timestamp
+              expiresAt = expiresAt
             )
             
             refreshTokenRepository.create(refreshToken).map { _ =>
@@ -71,7 +72,7 @@ class AuthService @Inject()(
           case Some(token) =>
             userRepository.findById(token.userId).map {
               case Some(user) =>
-                val newAccessToken = jwtUtil.createAccessToken(user.id.get, user.email)
+                val newAccessToken = jwtUtil.createAccessToken(user.id.get, user.email, user.role.toString)
                 Right(newAccessToken)
               case None =>
                 Left("User not found")
@@ -85,11 +86,58 @@ class AuthService @Inject()(
   }
 
   def logout(refreshToken: String): Future[Boolean] = {
-    logger.info("Logging out user")
+    logger.info("Revoking refresh token")
     refreshTokenRepository.revokeToken(refreshToken).map(_ > 0)
   }
 
-  def validateAccessToken(token: String): Option[(Long, String)] = {
-    jwtUtil.validateToken(token).toOption.map(claims => (claims.userId, claims.email))
+  def revokeAccessToken(accessToken: String, userId: Long): Future[Boolean] = {
+    logger.info(s"Revoking access token for user: $userId")
+    
+    jwtUtil.validateToken(accessToken) match {
+      case scala.util.Success(claims) =>
+        val now = Timestamp.valueOf(LocalDateTime.now())
+        // Access tokens expire in 15 minutes
+        val expiresAt = Timestamp.valueOf(LocalDateTime.now().plusSeconds(accessTokenExpiry))
+        
+        val revokedToken = RevokedToken(
+          id = None,
+          token = accessToken,
+          userId = userId,
+          tokenType = "ACCESS",
+          revokedAt = now,
+          expiresAt = expiresAt
+        )
+        
+        revokedTokenRepository.create(revokedToken).map { _ =>
+          logger.info(s"Access token revoked for user: $userId")
+          true
+        }.recover {
+          case ex: Exception =>
+            logger.error(s"Failed to revoke access token: ${ex.getMessage}", ex)
+            false
+        }
+        
+      case scala.util.Failure(ex) =>
+        logger.warn(s"Invalid access token provided for revocation: ${ex.getMessage}")
+        Future.successful(false)
+    }
+  }
+
+  def validateAccessToken(token: String): Future[Option[(Long, String, String)]] = {
+    // First check if token is revoked
+    revokedTokenRepository.isTokenRevoked(token).flatMap {
+      case true =>
+        logger.info("Token is revoked")
+        Future.successful(None)
+      case false =>
+        // Then validate JWT
+        jwtUtil.validateToken(token) match {
+          case scala.util.Success(claims) =>
+            Future.successful(Some((claims.userId, claims.email, claims.role)))
+          case scala.util.Failure(ex) =>
+            logger.warn(s"Token validation failed: ${ex.getMessage}")
+            Future.successful(None)
+        }
+    }
   }
 }

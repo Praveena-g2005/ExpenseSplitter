@@ -1,7 +1,7 @@
 package app.controllers
 
 import app.services.BalanceService
-import app.models.Balance
+import app.models.{Balance,UserRole}
 import javax.inject.{Inject, Singleton}
 import play.api.mvc._
 import play.api.libs.json._
@@ -47,7 +47,7 @@ class BalanceController @Inject() (
       logger.info(s"Fetching balance summary for user: $userId")
 
       // Authorization: Users can only view their own balances
-      if (userId != request.user.id.get) {
+      if (request.user.role != UserRole.ADMIN && userId != request.user.id.get) {
         Future.successful(
           Forbidden(
             Json.toJson(
@@ -94,7 +94,7 @@ class BalanceController @Inject() (
     authAction.async { request: AuthenticatedRequest[AnyContent] =>
       logger.info(s"Fetching outgoing balances for user: $userId")
 
-      if (userId != request.user.id.get) {
+      if (request.user.role != UserRole.ADMIN && userId != request.user.id.get) {
         Future.successful(
           Forbidden(
             Json.toJson(
@@ -135,7 +135,7 @@ class BalanceController @Inject() (
     request: AuthenticatedRequest[AnyContent] =>
       logger.info(s"Fetching incoming balances for user: $userId")
 
-      if (userId != request.user.id.get) {
+      if (request.user.role != UserRole.ADMIN && userId != request.user.id.get) {
         Future.successful(
           Forbidden(
             Json.toJson(
