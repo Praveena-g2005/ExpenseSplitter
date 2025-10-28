@@ -15,8 +15,8 @@ POST    /auth/login                 app.controllers.AuthController.login
 POST    /auth/refresh               app.controllers.AuthController.refresh
 POST    /auth/logout                app.controllers.AuthController.logout
 
-# User APIs
-POST    /users                      app.controllers.UserController.createUser
+
+# Admin APIs
 GET     /users                      app.controllers.UserController.getAllUsers
 GET     /users/:id                  app.controllers.UserController.getUserById(id :Long)
 
