@@ -2,7 +2,12 @@ package app.services
 
 import play.api.libs.json._
 import app.models.{Balance, Expense, Participants, UserTable}
-import app.repositories.{BalanceRepository, ExpenseRepository, ParticipantRepository, UserRepository}
+import app.repositories.{
+  BalanceRepository,
+  ExpenseRepository,
+  ParticipantRepository,
+  UserRepository
+}
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 import play.api.Logging
@@ -12,17 +17,17 @@ import app.models.User
 case class ParticipantShare(userId: Long, shareAmount: Double)
 case class ExpenseCreationResult(expense: Expense, balances: List[Balance])
 case class ExpenseDetails(
-  expense: Expense,
-  participants: List[Participants],
-  balances: List[Balance],
-  participantUsers: List[User]
+    expense: Expense,
+    participants: List[Participants],
+    balances: List[Balance],
+    participantUsers: List[User]
 )
 case class UserExpenseStats(
-  totalPaid: Double,
-  expenseCount: Int,
-  totalOwedByUser: Double,
-  totalOwedToUser: Double,
-  netBalance: Double
+    totalPaid: Double,
+    expenseCount: Int,
+    totalOwedByUser: Double,
+    totalOwedToUser: Double,
+    netBalance: Double
 )
 
 object ExpenseServiceFormats {
@@ -35,21 +40,21 @@ object ExpenseServiceFormats {
 
 @Singleton
 class ExpenseService @Inject() (
-  expenseRepository: ExpenseRepository,
-  participantRepository: ParticipantRepository,
-  balanceRepository: BalanceRepository,
-  userRepository: UserRepository
+    expenseRepository: ExpenseRepository,
+    participantRepository: ParticipantRepository,
+    balanceRepository: BalanceRepository,
+    userRepository: UserRepository
 )(implicit ec: ExecutionContext)
     extends Logging {
 
-  import ExpenseServiceFormats._ // bring JSON implicits into scope
+  import ExpenseServiceFormats._
 
   /** Creates an expense and calculates balances */
   def createExpense(
-    description: String,
-    amount: Double,
-    paidBy: Long,
-    participants: List[ParticipantShare]
+      description: String,
+      amount: Double,
+      paidBy: Long,
+      participants: List[ParticipantShare]
   ): Future[ExpenseCreationResult] = {
 
     val totalShares = participants.map(_.shareAmount).sum
@@ -66,10 +71,10 @@ class ExpenseService @Inject() (
 
   /** Helper method for equal split expenses */
   def createEqualSplitExpense(
-    description: String,
-    amount: Double,
-    paidBy: Long,
-    participantIds: List[Long]
+      description: String,
+      amount: Double,
+      paidBy: Long,
+      participantIds: List[Long]
   ): Future[ExpenseCreationResult] = {
     val sharePerPerson = amount / participantIds.length
     val participants =
@@ -80,10 +85,10 @@ class ExpenseService @Inject() (
   def getAllExpenses(): Future[List[Expense]] = expenseRepository.findAll()
 
   private def createExpenseTransaction(
-    description: String,
-    amount: Double,
-    paidBy: Long,
-    participants: List[ParticipantShare]
+      description: String,
+      amount: Double,
+      paidBy: Long,
+      participants: List[ParticipantShare]
   ): Future[ExpenseCreationResult] = {
 
     val expense = Expense(

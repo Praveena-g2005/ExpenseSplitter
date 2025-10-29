@@ -10,14 +10,19 @@ import java.sql.Timestamp
 import java.time.Instant
 
 @Singleton
-class NotificationRepository @Inject() (dbConfigProvider: DatabaseConfigProvider)(implicit ec: ExecutionContext) {
+class NotificationRepository @Inject() (
+    dbConfigProvider: DatabaseConfigProvider
+)(implicit ec: ExecutionContext) {
   private val dbConfig = dbConfigProvider.get[MySQLProfile]
   private val db = dbConfig.db
   private val notifications = TableQuery[NotificationTable]
 
   def create(n: Notification): Future[Long] = {
-    val notificationWithTs = n.copy(createdAt = Some(Timestamp.from(Instant.now())))
-    val insertQuery = (notifications.map(t => (t.id.?, t.expenseId, t.toUser, t.message, t.createdAt))
+    val notificationWithTs =
+      n.copy(createdAt = Some(Timestamp.from(Instant.now())))
+    val insertQuery = (notifications.map(t =>
+      (t.id.?, t.expenseId, t.toUser, t.message, t.createdAt)
+    )
       returning notifications.map(_.id)) += (
       notificationWithTs.id,
       notificationWithTs.expenseId,

@@ -19,7 +19,7 @@ class JwtUtil @Inject() (config: Configuration) {
   private val accessTokenExpiry =
     config.get[Int]("jwt.access-token-expiry") // seconds
 
-  def createAccessToken(userId: Long, email: String , role: String ): String = {
+  def createAccessToken(userId: Long, email: String, role: String): String = {
     val now = Instant.now()
     val expiry = now.plusSeconds(accessTokenExpiry.toLong)
 
@@ -27,7 +27,7 @@ class JwtUtil @Inject() (config: Configuration) {
       .create()
       .withSubject(userId.toString)
       .withClaim("email", email)
-      .withClaim("role" , role)
+      .withClaim("role", role)
       .withIssuedAt(Date.from(now))
       .withExpiresAt(Date.from(expiry))
       .sign(algorithm)
@@ -40,6 +40,6 @@ class JwtUtil @Inject() (config: Configuration) {
       val userId = decoded.getSubject.toLong
       val email = decoded.getClaim("email").asString()
       val role = decoded.getClaim("role").asString()
-      JwtClaims(userId, email , role)
+      JwtClaims(userId, email, role)
     }
 }

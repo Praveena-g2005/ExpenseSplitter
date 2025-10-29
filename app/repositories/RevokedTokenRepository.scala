@@ -9,35 +9,42 @@ import java.sql.Timestamp
 import java.time.LocalDateTime
 
 @Singleton
-class RevokedTokenRepository @Inject()(
-  dbConfigProvider: DatabaseConfigProvider
+class RevokedTokenRepository @Inject() (
+    dbConfigProvider: DatabaseConfigProvider
 )(implicit ec: ExecutionContext) {
-  
+
   private val revokedTokens = TableQuery[RevokedTokenTable]
   private val db = dbConfigProvider.get.db
-  
+
   def create(revokedToken: RevokedToken): Future[RevokedToken] = {
-    val insertQuery = revokedTokens returning revokedTokens.map(_.id) += revokedToken
-    db.run(insertQuery).map { generatedId =>
-      revokedToken.copy(id = Some(generatedId))
-    }.recover {
-      case _: Exception =>
+    val insertQuery =
+      revokedTokens returning revokedTokens.map(_.id) += revokedToken
+    db.run(insertQuery)
+      .map { generatedId =>
+        revokedToken.copy(id = Some(generatedId))
+      }
+      .recover { case _: Exception =>
         revokedToken
-    }
+      }
   }
 
   def isTokenRevoked(token: String): Future[Boolean] = {
     val query = revokedTokens.filter(_.token === token).exists
     db.run(query.result)
   }
-  
+
   def deleteExpiredTokens(): Future[Int] = {
     val now = Timestamp.valueOf(LocalDateTime.now())
     val query = revokedTokens.filter(_.expiresAt < now).delete
     db.run(query)
   }
-  
-  def revokeToken(token: String, userId: Long, expiresAt: Timestamp ,tokenType :String): Future[RevokedToken] = {
+
+  def revokeToken(
+      token: String,
+      userId: Long,
+      expiresAt: Timestamp,
+      tokenType: String
+  ): Future[RevokedToken] = {
     val now = Timestamp.valueOf(LocalDateTime.now())
     val revokedToken = RevokedToken(
       id = None,

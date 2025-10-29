@@ -10,7 +10,7 @@ case class RefreshToken(
     id: Option[Long] = None,
     userId: Long,
     token: String,
-    expiresAt: Timestamp,  // Changed to Timestamp
+    expiresAt: Timestamp,  
     revoked: Boolean = false
 )
 
@@ -31,7 +31,7 @@ class RefreshTokenTable(tag: Tag) extends Table[RefreshToken](tag, "refresh_toke
   def id: Rep[Long] = column[Long]("id", O.PrimaryKey, O.AutoInc)
   def userId: Rep[Long] = column[Long]("user_id")
   def token: Rep[String] = column[String]("token")
-  def expiresAt: Rep[Timestamp] = column[Timestamp]("expires_at")  // Changed to Timestamp
+  def expiresAt: Rep[Timestamp] = column[Timestamp]("expires_at")  
   def revoked: Rep[Boolean] = column[Boolean]("revoked")
 
   def * : ProvenShape[RefreshToken] =

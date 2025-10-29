@@ -10,7 +10,7 @@ import notification.notification.NotificationServiceGrpc
 
 @Singleton
 class NotificationServiceImpl @Inject() (
-  repo: NotificationRepository
+    repo: NotificationRepository
 )(implicit ec: ExecutionContext)
     extends NotificationServiceGrpc.NotificationService {
 
@@ -22,10 +22,14 @@ class NotificationServiceImpl @Inject() (
     }
   }
 
-  override def notifyMany(request: NotifyManyRequest): Future[NotifyResponse] = {
+  override def notifyMany(
+      request: NotifyManyRequest
+  ): Future[NotifyResponse] = {
     val saves = request.recipients.map { to =>
       notify(NotifyRequest(request.expenseId, to, request.message))
     }
-    Future.sequence(saves).map(_ => NotifyResponse(ok = true, details = "all saved"))
+    Future
+      .sequence(saves)
+      .map(_ => NotifyResponse(ok = true, details = "all saved"))
   }
 }

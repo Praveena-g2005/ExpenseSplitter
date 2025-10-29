@@ -79,7 +79,6 @@ CREATE TABLE IF NOT EXISTS revoked_tokens (
 -- Create default admin user
 -- Email: admin@example.com
 -- Password: Admin@123
--- ⚠️ IMPORTANT: Change this password in production!
 INSERT INTO users (name, email, password_hash, role) 
 VALUES (
   'System Admin', 

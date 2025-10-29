@@ -8,8 +8,8 @@ import slick.jdbc.MySQLProfile.api._
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class BalanceRepository @Inject() (dbConfigProvider: DatabaseConfigProvider)(implicit
-  ec: ExecutionContext
+class BalanceRepository @Inject() (dbConfigProvider: DatabaseConfigProvider)(
+    implicit ec: ExecutionContext
 ) {
   protected val db = dbConfigProvider.get.db
   private val balances = TableQuery[BalanceTable]

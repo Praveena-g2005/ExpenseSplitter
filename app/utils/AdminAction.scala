@@ -12,9 +12,9 @@ import play.api.Logging
 
 @Singleton
 class AdminAction @Inject() (
-  parser: BodyParsers.Default,
-  authService: AuthService,
-  userRepository: UserRepository
+    parser: BodyParsers.Default,
+    authService: AuthService,
+    userRepository: UserRepository
 )(implicit ec: ExecutionContext)
     extends ActionBuilder[AuthenticatedRequest, AnyContent]
     with Logging {
@@ -23,8 +23,8 @@ class AdminAction @Inject() (
   override def parser: BodyParser[AnyContent] = parser
 
   override def invokeBlock[A](
-    request: Request[A],
-    block: AuthenticatedRequest[A] => Future[Result]
+      request: Request[A],
+      block: AuthenticatedRequest[A] => Future[Result]
   ): Future[Result] = {
 
     logger.info(
@@ -36,8 +36,10 @@ class AdminAction @Inject() (
         logger.info(s"AdminAction: Token found, validating...")
         authService.validateAccessToken(token).flatMap {
           case Some((userId, email, role)) =>
-            logger.info(s"AdminAction: Token valid for user $userId ($email) with role $role")
-            
+            logger.info(
+              s"AdminAction: Token valid for user $userId ($email) with role $role"
+            )
+
             // Check if user has ADMIN role
             if (role == UserRole.ADMIN.toString) {
               userRepository.findById(userId).flatMap {
@@ -45,21 +47,27 @@ class AdminAction @Inject() (
                   logger.info(s"AdminAction: Admin user $userId authorized")
                   block(AuthenticatedRequest(user, request))
                 case None =>
-                  logger.warn(s"AdminAction: User $userId not found in database")
+                  logger
+                    .warn(s"AdminAction: User $userId not found in database")
                   Future.successful(
                     Unauthorized(Json.obj("error" -> "User not found"))
                   )
               }
             } else {
-              logger.warn(s"AdminAction: User $userId is not an admin (role: $role)")
+              logger.warn(
+                s"AdminAction: User $userId is not an admin (role: $role)"
+              )
               Future.successful(
                 Forbidden(Json.obj("error" -> "Admin access required"))
               )
             }
           case None =>
-            logger.warn(s"AdminAction: Token validation failed or token revoked")
+            logger
+              .warn(s"AdminAction: Token validation failed or token revoked")
             Future.successful(
-              Unauthorized(Json.obj("error" -> "Invalid, expired, or revoked token"))
+              Unauthorized(
+                Json.obj("error" -> "Invalid, expired, or revoked token")
+              )
             )
         }
       case None =>

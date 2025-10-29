@@ -24,11 +24,11 @@ object UserRole extends Enumeration {
 }
 
 case class User(
-  id: Option[Long] = None,
-  name: String,
-  email: String,
-  passwordHash: String,
-  role: UserRole.UserRole = UserRole.USER   //default is user role
+    id: Option[Long] = None,
+    name: String,
+    email: String,
+    passwordHash: String,
+    role: UserRole.UserRole = UserRole.USER // default is user role
 )
 object User {
   import UserRole.userRoleFormat
@@ -51,6 +51,12 @@ class UserTable(tag: Tag) extends Table[User](tag, "users") {
   def role: Rep[UserRole] = column[UserRole]("role", O.Default(UserRole.USER))
 
   def * : ProvenShape[User] =
-  (id.?, name, email, passwordHash, role) <> ((User.apply _).tupled, User.unapply)
+    (
+      id.?,
+      name,
+      email,
+      passwordHash,
+      role
+    ) <> ((User.apply _).tupled, User.unapply)
 
 }

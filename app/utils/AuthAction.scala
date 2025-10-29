@@ -11,9 +11,9 @@ import play.api.Logging
 
 @Singleton
 class AuthAction @Inject() (
-  parser: BodyParsers.Default,
-  authService: AuthService,
-  userRepository: UserRepository
+    parser: BodyParsers.Default,
+    authService: AuthService,
+    userRepository: UserRepository
 )(implicit ec: ExecutionContext)
     extends ActionBuilder[AuthenticatedRequest, AnyContent]
     with Logging {
@@ -22,8 +22,8 @@ class AuthAction @Inject() (
   override def parser: BodyParser[AnyContent] = parser
 
   override def invokeBlock[A](
-    request: Request[A],
-    block: AuthenticatedRequest[A] => Future[Result]
+      request: Request[A],
+      block: AuthenticatedRequest[A] => Future[Result]
   ): Future[Result] = {
 
     logger.info(
@@ -34,8 +34,10 @@ class AuthAction @Inject() (
       case Some(token) =>
         logger.info(s"AuthAction: Token found, validating...")
         authService.validateAccessToken(token).flatMap {
-          case Some((userId, email ,role)) =>
-            logger.info(s"AuthAction: Token valid for user $userId ($email) with role $role")
+          case Some((userId, email, role)) =>
+            logger.info(
+              s"AuthAction: Token valid for user $userId ($email) with role $role"
+            )
             userRepository.findById(userId).flatMap {
               case Some(user) =>
                 logger.info(s"AuthAction: User found, proceeding with request")

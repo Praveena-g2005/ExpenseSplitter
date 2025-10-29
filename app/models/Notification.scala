@@ -4,11 +4,11 @@ import play.api.libs.json._
 import java.sql.Timestamp
 
 case class Notification(
-  id: Option[Long] = None,
-  expenseId: String,
-  to: String,
-  message: String,
-  createdAt: Option[Timestamp] = None
+    id: Option[Long] = None,
+    expenseId: String,
+    to: String,
+    message: String,
+    createdAt: Option[Timestamp] = None
 )
 
 object Notification {

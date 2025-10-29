@@ -5,29 +5,29 @@ import app.models.{Balance, Expense}
 import app.services.{ExpenseService, ExpenseServiceFormats, ParticipantShare}
 // JSON request/response case classes
 case class CreateExpenseRequest(
-  description: String,
-  amount: Double,
-  paidBy: Long,
-  participants: List[ParticipantShare]
+    description: String,
+    amount: Double,
+    paidBy: Long,
+    participants: List[ParticipantShare]
 )
 
 case class CreateExpenseResponse(
-  success: Boolean,
-  message: String,
-  expense: Option[Expense] = None,
-  balanceCount: Option[Int] = None
+    success: Boolean,
+    message: String,
+    expense: Option[Expense] = None,
+    balanceCount: Option[Int] = None
 )
 
 case class ExpenseListResponse(
-  expenses: List[Expense],
-  count: Int
+    expenses: List[Expense],
+    count: Int
 )
 
 case class BalanceRelationshipResponse(
-  otherUserId: Long,
-  otherUserName: String,
-  otherUserEmail: String,
-  netAmount: Double
+    otherUserId: Long,
+    otherUserName: String,
+    otherUserEmail: String,
+    netAmount: Double
 )
 
 object BalanceRelationshipResponse {
@@ -36,8 +36,8 @@ object BalanceRelationshipResponse {
 }
 
 case class ExpenseErrorResponse(
-  success: Boolean,
-  error: String
+    success: Boolean,
+    error: String
 )
 
 object ExpenseErrorResponse {
