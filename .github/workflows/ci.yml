@@ -45,5 +45,5 @@ jobs:
       - name: Compile project
         run: sbt compile
 
-      - name: Run tests (H2 in-memory DB)
-        run: sbt -Dconfig.file=conf/application.test.conf test
+      - name: Run tests 
+        run: sbt test
