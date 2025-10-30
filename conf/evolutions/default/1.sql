@@ -5,14 +5,14 @@ CREATE TABLE IF NOT EXISTS users (
   name VARCHAR(255) NOT NULL,
   email VARCHAR(255) NOT NULL UNIQUE,
   password_hash VARCHAR(255) NOT NULL,
-  role VARCHAR(20) NOT NULL DEFAULT 'USER', --- use enum to avoid wrong inputs
+  role VARCHAR(20) NOT NULL DEFAULT 'USER', -- use enum to avoid wrong inputs
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   INDEX idx_user_role (role)
 );
 
 CREATE TABLE IF NOT EXISTS expenses (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
-  description VARCHAR(255), --- need to change this description to name
+  description VARCHAR(255), -- need to change this description to name
   amount DOUBLE NOT NULL,
   paid_by BIGINT NOT NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -30,8 +30,8 @@ CREATE TABLE IF NOT EXISTS expense_participants (
 
 CREATE TABLE IF NOT EXISTS balances (
   id BIGINT AUTO_INCREMENT PRIMARY KEY,
-  from_user BIGINT NOT NULL, --- change to sender 
-  to_user BIGINT NOT NULL, --- change to receiver
+  from_user BIGINT NOT NULL, -- change to sender 
+  to_user BIGINT NOT NULL, -- change to receiver
   expense_id BIGINT NOT NULL,
   amount DOUBLE NOT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -43,13 +43,13 @@ CREATE TABLE IF NOT EXISTS balances (
 CREATE TABLE IF NOT EXISTS notifications (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
   expense_id BIGINT NOT NULL,
-  recipient BIGINT NOT NULL, --- change to notifier
+  recipient BIGINT NOT NULL, -- change to notifier
   message TEXT NOT NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (expense_id) REFERENCES expenses(id),
   FOREIGN KEY (recipient) REFERENCES users(id)
 );
---- need to remove refresh tokens and revoked tokens table
+-- need to remove refresh tokens and revoked tokens table
 CREATE TABLE IF NOT EXISTS refresh_tokens (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
   user_id BIGINT NOT NULL,
