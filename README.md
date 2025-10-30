@@ -7,14 +7,23 @@ It enables users to register, log in, add shared expenses, and view who owes who
 ## 📚 Table of Contents
 
  Architecture
+
  Endpoints
+
  Example Payloads
+
  Tech Stack
+
  Prerequisites
+
  Installation & Setup
+
  Authentication Flow
+
  Notes
+
  Postman Testing
+
 
 ---
 
@@ -23,66 +32,111 @@ It enables users to register, log in, add shared expenses, and view who owes who
 The project follows a clean layered architecture:
 
 Controllers → Handle HTTP requests & responses
+
 Services → Contain business logic (auth, expenses, balances)
+
 Repositories → Handle database interactions with Slick
+
 Models → Represent database entities
+
 Auth Layer → Manages JWT generation, validation, and refresh
+
 gRPC Layer → Sends notifications asynchronously
+
 Utils → Helper utilities for auth, hashing, etc.
+
 
 ## Database Schema
 
 users
+
 ├── id (PK, AUTO_INCREMENT)
+
 ├── name
+
 ├── email (UNIQUE)
+
 ├── password_hash
+
 ├── role (USER/ADMIN)
+
 └── created_at
 
 expenses
+
 ├── id (PK, AUTO_INCREMENT)
+
 ├── expensename
+
 ├── amount
+
 ├── paid_by (FK → users.id)
+
 └── created_at
 
 expense_participants
+
 ├── id (PK, AUTO_INCREMENT)
+
 ├── expense_id (FK → expenses.id)
+
 ├── user_id (FK → users.id)
+
 └── shared_amt
 
 balances
+
 ├── id (PK, AUTO_INCREMENT)
+
 ├── sender (FK → users.id)
+
 ├── receiver (FK → users.id)
+
 ├── expense_id (FK → expenses.id)
+
 ├── amount
+
 └── created_at
 
 notifications
+
 ├── id (PK, AUTO_INCREMENT)
+
 ├── expense_id (FK → expenses.id)
+
 ├── notifier (FK → users.id)
+
 ├── message
+
 └── created_at
 
 refresh_tokens
+
 ├── id (PK, AUTO_INCREMENT)
+
 ├── user_id (FK → users.id)
+
 ├── token (UNIQUE)
+
 ├── expires_at
+
 ├── revoked
+
 └── created_at
 
 revoked_tokens
 ├── id (PK, AUTO_INCREMENT)
+
 ├── token
+
 ├── user_id (FK → users.id)
+
 ├── token_type (ACCESS/REFRESH)
+
 ├── revoked_at
+
 ├── expires_at
+
 └── created_at
 
 ---
@@ -230,36 +284,49 @@ Headers: Authorization: Bearer <access_token>
 ## Backend
 
 Language: Scala 2.13.16
+
 Framework: Play Framework 3.0 (with Pekko)
+
 Database ORM: Slick 5.1.0
+
 Build Tool: sbt 1.9+
 
 ## Database
 
 Production: MySQL (production db)
+
 Testing   : MySQL (testing db)
+
 Migrations: Play Evolutions
 
 ## Security & Authentication
 
 JWT: java-jwt 4.4.0
+
 Password Hashing: BCrypt (scala-bcrypt 4.3.0)
+
 Token Strategy: Access Token (15 min) + Refresh Token (7 days)
 
 
 ## Testing
 
 ScalaTest: 3.2.19
+
 ScalaTestPlus Play: 7.0.2
+
 Mockito Scala: 1.17.14
 
 
 ## ⚙️ Prerequisites
 
 Java JDK 11+ (Recommended: JDK 17)
+
 Scala 2.13.16
+
 sbt (Scala Build Tool)
+
 MySQL 8.0+
+
 Git
 
 ## 🚀 Installation & Setup
@@ -296,133 +363,36 @@ Password: Admin@123
 
 1. Registration & Login
 
-┌──────────┐                                  ┌──────────┐
-│  Client  │                                  │  Server  │
-└────┬─────┘                                  └────┬─────┘
-     │                                             │
-     │  POST /auth/register                        │
-     │  { name, email, password }                  │
-     ├────────────────────────────────────────────>│
-     │                                             │
-     │        • Hash password (bcrypt)             │
-     │        • Save user to database              │
-     │        • Set role = USER                    │
-     │                                             │
-     │  201 Created                                │
-     │  { message, user }                          │
-     │<────────────────────────────────────────────┤
-     │                                             │
-     │  POST /auth/login                           │
-     │  { email, password }                        │
-     ├────────────────────────────────────────────>│
-     │                                             │
-     │        • Verify password hash               │
-     │        • Revoke old refresh tokens          │
-     │        • Create JWT access token (15min)    │
-     │        • Create UUID refresh token (7days)  │
-     │        • Save refresh token to DB           │
-     │                                             │
-     │  200 OK                                     │
-     │  { accessToken, refreshToken, user }        │
-     │<────────────────────────────────────────────┤
-     │                                             │
+![Register and login flow ](assets/registerandlogin.png)
 
 2. Accessing Protected Routes
 
-┌──────────┐                                  ┌──────────┐
-│  Client  │                                  │  Server  │
-└────┬─────┘                                  └────┬─────┘
-     │                                             │
-     │  GET /expenses                              │
-     │  Authorization: Bearer <access_token>       │
-     ├────────────────────────────────────────────>│
-     │                                             │
-     │        AuthAction intercepts:               │
-     │        1. Extract token from header         │
-     │        2. Check if token is revoked         │
-     │        3. Validate JWT signature            │
-     │        4. Check expiry                      │
-     │        5. Extract user info (id, role)      │
-     │        6. Load user from database           │
-     │        7. Proceed to controller             │
-     │                                             │
-     │  200 OK                                     │
-     │  [ expenses... ]                            │
-     │<────────────────────────────────────────────┤
-     │                                             │
+![Protected Route flow ](assets/protectedroutes.png)
 
- 3. Token Refresh Flow
+3. Token Refresh Flow
 
- ┌──────────┐                                  ┌──────────┐
-│  Client  │                                  │  Server  │
-└────┬─────┘                                  └────┬─────┘
-     │                                             │
-     │  Time: 15 minutes later...                  │
-     │  Access token EXPIRED                       │
-     │                                             │
-     │  GET /expenses                              │
-     │  Authorization: Bearer <expired_token>      │
-     ├────────────────────────────────────────────>│
-     │                                             │
-     │  401 Unauthorized                           │
-     │  { error: "Token expired" }                 │
-     │<────────────────────────────────────────────┤
-     │                                             │
-     │  POST /auth/refresh                         │
-     │  { refreshToken }                           │
-     ├────────────────────────────────────────────>│
-     │                                             │
-     │        • Find refresh token in DB           │
-     │        • Check not revoked                  │
-     │        • Check not expired                  │
-     │        • Get associated user                │
-     │        • Generate NEW access token          │
-     │                                             │
-     │  200 OK                                     │
-     │  { accessToken, expiresIn: 900 }            │
-     │<────────────────────────────────────────────┤
-     │                                             │
-     │  GET /expenses (with new token)             │
-     │  Authorization: Bearer <new_access_token>   │
-     ├────────────────────────────────────────────>│
-     │                                             │
-     │  200 OK                                     │
-     │  [ expenses... ]                            │
-     │<────────────────────────────────────────────┤
-     │                                             │
+![Token Refresh flow ](assets/tokenrefresh.png)
 
 4. Logout Flow
 
-┌──────────┐                                  ┌──────────┐
-│  Client  │                                  │  Server  │
-└────┬─────┘                                  └────┬─────┘
-     │                                             │
-     │  POST /auth/logout                          │
-     │  Authorization: Bearer <access_token>       │
-     │  { refreshToken, accessToken }              │
-     ├────────────────────────────────────────────>│
-     │                                             │
-     │        • Validate access token via AuthAction│
-     │        • Mark refresh token as revoked      │
-     │        • Add access token to blacklist      │
-     │                                             │
-     │  200 OK                                     │
-     │  { message: "Logged out successfully" }     │
-     │<────────────────────────────────────────────┤
-     │                                             │
-     │  Both tokens are now unusable               │
-     │                                             │
-    
+![Logout flow ](assets/logoutflow.png)
+
 ---
 
 ## 🚧 Notes
 
 ✅ All passwords hashed with BCrypt
+
 ✅ JWT tokens signed and verified
+
 ✅ Refresh tokens can be revoked
+
 ✅ Access tokens have short expiry (15 min)
+
 ✅ Protected routes require authentication
+
 ✅ Admin-only routes enforce role checks
+
 ⚠️ Change default admin password immediately
 
 
