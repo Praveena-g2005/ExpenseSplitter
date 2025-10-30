@@ -14,6 +14,25 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
+    services:
+      mysql:
+        image: mysql:8
+        env:
+          MYSQL_ROOT_PASSWORD: praveena
+          MYSQL_DATABASE: expenseservicetest
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -ppraveena"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    env:
+      DB_URL: "jdbc:mysql://localhost:3306/expenseservicetest?useSSL=false&allowPublicKeyRetrieval=true"
+      DB_USER: "root"
+      DB_PASSWORD: "praveena"
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -39,11 +58,18 @@ jobs:
             ~/.coursier
           key: ${{ runner.os }}-sbt-${{ hashFiles('**/build.sbt') }}
 
+      - name: Wait for MySQL to be ready
+        run: |
+          for i in {1..10}; do
+            nc -z localhost 3306 && echo "✅ MySQL is up!" && break
+            echo "Waiting for MySQL..." && sleep 5
+          done
+
       - name: Run scalafmt check
         run: sbt scalafmtCheckAll
 
       - name: Compile project
         run: sbt compile
 
-      - name: Run tests 
+      - name: Run tests
         run: sbt test
