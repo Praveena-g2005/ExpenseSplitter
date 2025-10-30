@@ -11,9 +11,9 @@ object UserRole extends Enumeration {
   implicit val userRoleFormat: Format[UserRole] = new Format[UserRole] {
     def reads(json: JsValue): JsResult[UserRole] = json match {
       case JsString(s) =>
-        try {
+        try
           JsSuccess(UserRole.withName(s.toUpperCase))
-        } catch {
+        catch {
           case _: NoSuchElementException => JsError(s"Invalid role: $s")
         }
       case _ => JsError("String expected for role")
@@ -24,11 +24,11 @@ object UserRole extends Enumeration {
 }
 
 case class User(
-    id: Option[Long] = None,
-    name: String,
-    email: String,
-    passwordHash: String,
-    role: UserRole.UserRole = UserRole.USER // default is user role
+  id: Option[Long] = None,
+  name: String,
+  email: String,
+  passwordHash: String,
+  role: UserRole.UserRole = UserRole.USER // default is user role
 )
 object User {
   import UserRole.userRoleFormat

@@ -40,8 +40,8 @@ object Validators {
   }
 
   def validateAmount(
-      amount: Double,
-      fieldname: String = "amount"
+    amount: Double,
+    fieldname: String = "amount"
   ): ValidationResult =
     if (amount <= 0) {
       ValidationFailure("Amount should be positive")

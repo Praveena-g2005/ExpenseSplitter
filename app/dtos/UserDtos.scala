@@ -4,16 +4,16 @@ import play.api.libs.json._
 import app.models.User
 
 case class CreateUserRequest(
-    name: String,
-    email: String,
-    password: String
+  name: String,
+  email: String,
+  password: String
 )
 
 case class UserResponse(
-    id: Long,
-    name: String,
-    email: String,
-    role: String
+  id: Long,
+  name: String,
+  email: String,
+  role: String
 )
 
 object CreateUserRequest {
@@ -35,8 +35,8 @@ object UserResponse {
 }
 
 case class ErrorResponse(
-    error: String,
-    details: Option[Map[String, String]] = None
+  error: String,
+  details: Option[Map[String, String]] = None
 )
 object ErrorResponse {
   implicit val format: OFormat[ErrorResponse] = Json.format[ErrorResponse]

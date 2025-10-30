@@ -23,5 +23,5 @@ message NotifyManyRequest {
 
 message NotifyResponse {
   bool ok = 1;
-  string details = 2;
+  string details = 2;  // need to remove this no need to return details 
 }

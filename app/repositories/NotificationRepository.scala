@@ -11,7 +11,7 @@ import java.time.Instant
 
 @Singleton
 class NotificationRepository @Inject() (
-    dbConfigProvider: DatabaseConfigProvider
+  dbConfigProvider: DatabaseConfigProvider
 )(implicit ec: ExecutionContext) {
   private val dbConfig = dbConfigProvider.get[MySQLProfile]
   private val db = dbConfig.db
@@ -20,9 +20,7 @@ class NotificationRepository @Inject() (
   def create(n: Notification): Future[Long] = {
     val notificationWithTs =
       n.copy(createdAt = Some(Timestamp.from(Instant.now())))
-    val insertQuery = (notifications.map(t =>
-      (t.id.?, t.expenseId, t.toUser, t.message, t.createdAt)
-    )
+    val insertQuery = (notifications.map(t => (t.id.?, t.expenseId, t.toUser, t.message, t.createdAt))
       returning notifications.map(_.id)) += (
       notificationWithTs.id,
       notificationWithTs.expenseId,

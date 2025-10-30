@@ -9,8 +9,8 @@ import notification.notification.NotificationServiceGrpc
 
 @Singleton
 class GrpcServer @Inject() (
-    svc: NotificationServiceImpl,
-    lifecycle: ApplicationLifecycle
+  svc: NotificationServiceImpl,
+  lifecycle: ApplicationLifecycle
 )(implicit ec: ExecutionContext)
     extends Logging {
 

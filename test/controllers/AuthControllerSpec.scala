@@ -10,10 +10,7 @@ import org.apache.pekko.stream.{Materializer, SystemMaterializer}
 import org.apache.pekko.actor.ActorSystem
 import play.api.inject.bind
 
-class AuthControllerSpec
-    extends PlaySpec
-    with GuiceOneAppPerSuite
-    with Injecting {
+class AuthControllerSpec extends PlaySpec with GuiceOneAppPerSuite with Injecting {
 
   // Create ActorSystem and Materializer explicitly for WSClient
   implicit lazy val actorSystem: ActorSystem = ActorSystem("TestSystem")

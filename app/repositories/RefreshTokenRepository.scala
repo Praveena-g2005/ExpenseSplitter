@@ -10,7 +10,7 @@ import java.time.LocalDateTime
 
 @Singleton
 class RefreshTokenRepository @Inject() (
-    dbConfigProvider: DatabaseConfigProvider
+  dbConfigProvider: DatabaseConfigProvider
 )(implicit ec: ExecutionContext) {
 
   private val refreshTokens = TableQuery[RefreshTokenTable]
@@ -24,9 +24,8 @@ class RefreshTokenRepository @Inject() (
     }
   }
 
-  def findByToken(token: String): Future[Option[RefreshToken]] = {
+  def findByToken(token: String): Future[Option[RefreshToken]] =
     db.run(refreshTokens.filter(_.token === token).result.headOption)
-  }
 
   def revokeToken(token: String): Future[Int] = {
     val query =

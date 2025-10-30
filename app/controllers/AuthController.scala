@@ -24,18 +24,18 @@ object RefreshRequest {
 }
 
 case class LogoutRequest(
-    refreshToken: String,
-    accessToken: Option[String] = None
+  refreshToken: String,
+  accessToken: Option[String] = None
 )
 object LogoutRequest {
   implicit val format: OFormat[LogoutRequest] = Json.format[LogoutRequest]
 }
 
 case class LoginResponse(
-    accessToken: String,
-    refreshToken: String,
-    expiresIn: Int,
-    user: UserInfo
+  accessToken: String,
+  refreshToken: String,
+  expiresIn: Int,
+  user: UserInfo
 )
 
 object LoginResponse {
@@ -59,10 +59,10 @@ object ErrorResponse {
 
 @Singleton
 class AuthController @Inject() (
-    cc: ControllerComponents,
-    userService: UserService,
-    authService: AuthService,
-    authAction: AuthAction
+  cc: ControllerComponents,
+  userService: UserService,
+  authService: AuthService,
+  authAction: AuthAction
 )(implicit ec: ExecutionContext)
     extends AbstractController(cc)
     with Logging {
@@ -155,57 +155,55 @@ class AuthController @Inject() (
     }
   }
 
-  def logout(): Action[JsValue] = authAction.async(parse.json) {
-    request: AuthenticatedRequest[JsValue] =>
-      logger.info(s"Logout request received for user: ${request.user.id}")
+  def logout(): Action[JsValue] = authAction.async(parse.json) { request: AuthenticatedRequest[JsValue] =>
+    logger.info(s"Logout request received for user: ${request.user.id}")
 
-      request.body.validate[LogoutRequest] match {
-        case JsSuccess(logoutRequest, _) =>
-          // Revoke refresh token
-          authService.logout(logoutRequest.refreshToken).flatMap {
-            refreshSuccess =>
-              // Also revoke access token if provided
-              logoutRequest.accessToken match {
-                case Some(accessToken) =>
-                  authService
-                    .revokeAccessToken(accessToken, request.user.id.get)
-                    .map { accessSuccess =>
-                      if (refreshSuccess || accessSuccess) {
-                        Ok(
-                          Json.obj(
-                            "message" -> "Logged out successfully",
-                            "tokensRevoked" -> true
-                          )
-                        )
-                      } else {
-                        BadRequest(
-                          Json.toJson(ErrorResponse("Failed to revoke tokens"))
-                        )
-                      }
-                    }
-                case None =>
-                  if (refreshSuccess) {
-                    Future.successful(
-                      Ok(
-                        Json.obj(
-                          "message" -> "Logged out successfully",
-                          "tokensRevoked" -> true
-                        )
+    request.body.validate[LogoutRequest] match {
+      case JsSuccess(logoutRequest, _) =>
+        // Revoke refresh token
+        authService.logout(logoutRequest.refreshToken).flatMap { refreshSuccess =>
+          // Also revoke access token if provided
+          logoutRequest.accessToken match {
+            case Some(accessToken) =>
+              authService
+                .revokeAccessToken(accessToken, request.user.id.get)
+                .map { accessSuccess =>
+                  if (refreshSuccess || accessSuccess) {
+                    Ok(
+                      Json.obj(
+                        "message" -> "Logged out successfully",
+                        "tokensRevoked" -> true
                       )
                     )
                   } else {
-                    Future.successful(
-                      BadRequest(
-                        Json.toJson(ErrorResponse("Invalid refresh token"))
-                      )
+                    BadRequest(
+                      Json.toJson(ErrorResponse("Failed to revoke tokens"))
                     )
                   }
+                }
+            case None =>
+              if (refreshSuccess) {
+                Future.successful(
+                  Ok(
+                    Json.obj(
+                      "message" -> "Logged out successfully",
+                      "tokensRevoked" -> true
+                    )
+                  )
+                )
+              } else {
+                Future.successful(
+                  BadRequest(
+                    Json.toJson(ErrorResponse("Invalid refresh token"))
+                  )
+                )
               }
           }
-        case JsError(_) =>
-          Future.successful(
-            BadRequest(Json.toJson(ErrorResponse("Invalid JSON")))
-          )
-      }
+        }
+      case JsError(_) =>
+        Future.successful(
+          BadRequest(Json.toJson(ErrorResponse("Invalid JSON")))
+        )
+    }
   }
 }

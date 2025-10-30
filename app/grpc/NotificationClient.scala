@@ -16,18 +16,18 @@ class NotificationClient @Inject() (implicit ec: ExecutionContext) {
   private val stub = NotificationServiceGrpc.stub(channel)
 
   def notifyMany(
-      expenseId: Long,
-      recipients: Seq[String],
-      message: String
+    expenseId: Long,
+    recipients: Seq[String],
+    message: String
   ): Future[NotifyResponse] = {
     val req = NotifyManyRequest(expenseId.toString, recipients, message)
     stub.notifyMany(req)
   }
 
   def notifyOne(
-      expenseId: Long,
-      to: String,
-      message: String
+    expenseId: Long,
+    to: String,
+    message: String
   ): Future[NotifyResponse] = {
     val req = NotifyRequest(expenseId.toString, to, message)
     stub.notify(req)

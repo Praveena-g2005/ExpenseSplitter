@@ -8,7 +8,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class ParticipantRepository @Inject() (
-    dbConfigProvider: DatabaseConfigProvider
+  dbConfigProvider: DatabaseConfigProvider
 )(implicit ec: ExecutionContext) {
   private val db = dbConfigProvider.get.db
   private val participants = TableQuery[ParticipantsTable]

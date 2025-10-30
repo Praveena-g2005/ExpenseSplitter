@@ -6,12 +6,12 @@ import slick.lifted.{ProvenShape, Tag}
 import java.sql.Timestamp
 
 case class RevokedToken(
-    id: Option[Long] = None,
-    token: String,
-    userId: Long,
-    tokenType: String,
-    revokedAt: Timestamp,
-    expiresAt: Timestamp
+  id: Option[Long] = None,
+  token: String,
+  userId: Long,
+  tokenType: String,
+  revokedAt: Timestamp,
+  expiresAt: Timestamp
 )
 
 object RevokedToken {
@@ -27,8 +27,7 @@ object RevokedToken {
   implicit val format: OFormat[RevokedToken] = Json.format[RevokedToken]
 }
 
-class RevokedTokenTable(tag: Tag)
-    extends Table[RevokedToken](tag, "revoked_tokens") {
+class RevokedTokenTable(tag: Tag) extends Table[RevokedToken](tag, "revoked_tokens") {
   def id: Rep[Long] = column[Long]("id", O.PrimaryKey, O.AutoInc)
   def token: Rep[String] = column[String]("token")
   def userId: Rep[Long] = column[Long]("user_id")

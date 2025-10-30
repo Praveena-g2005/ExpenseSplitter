@@ -11,9 +11,9 @@ import play.api.Logging
 
 @Singleton
 class AuthAction @Inject() (
-    parser: BodyParsers.Default,
-    authService: AuthService,
-    userRepository: UserRepository
+  parser: BodyParsers.Default,
+  authService: AuthService,
+  userRepository: UserRepository
 )(implicit ec: ExecutionContext)
     extends ActionBuilder[AuthenticatedRequest, AnyContent]
     with Logging {
@@ -22,8 +22,8 @@ class AuthAction @Inject() (
   override def parser: BodyParser[AnyContent] = parser
 
   override def invokeBlock[A](
-      request: Request[A],
-      block: AuthenticatedRequest[A] => Future[Result]
+    request: Request[A],
+    block: AuthenticatedRequest[A] => Future[Result]
   ): Future[Result] = {
 
     logger.info(

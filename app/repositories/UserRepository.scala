@@ -7,8 +7,8 @@ import play.api.db.slick.DatabaseConfigProvider
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class UserRepository @Inject() (dbConfigProvider: DatabaseConfigProvider)(
-    implicit ec: ExecutionContext
+class UserRepository @Inject() (dbConfigProvider: DatabaseConfigProvider)(implicit
+  ec: ExecutionContext
 ) {
   private val users = TableQuery[UserTable]
   private val db = dbConfigProvider.get.db

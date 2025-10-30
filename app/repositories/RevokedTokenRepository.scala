@@ -10,7 +10,7 @@ import java.time.LocalDateTime
 
 @Singleton
 class RevokedTokenRepository @Inject() (
-    dbConfigProvider: DatabaseConfigProvider
+  dbConfigProvider: DatabaseConfigProvider
 )(implicit ec: ExecutionContext) {
 
   private val revokedTokens = TableQuery[RevokedTokenTable]
@@ -23,8 +23,9 @@ class RevokedTokenRepository @Inject() (
       .map { generatedId =>
         revokedToken.copy(id = Some(generatedId))
       }
-      .recover { case _: Exception =>
-        revokedToken
+      .recover {
+        case _: Exception =>
+          revokedToken
       }
   }
 
@@ -40,10 +41,10 @@ class RevokedTokenRepository @Inject() (
   }
 
   def revokeToken(
-      token: String,
-      userId: Long,
-      expiresAt: Timestamp,
-      tokenType: String
+    token: String,
+    userId: Long,
+    expiresAt: Timestamp,
+    tokenType: String
   ): Future[RevokedToken] = {
     val now = Timestamp.valueOf(LocalDateTime.now())
     val revokedToken = RevokedToken(

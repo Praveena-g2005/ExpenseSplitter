@@ -1,12 +1,8 @@
 package app.services
 
-import app.models.{User, RefreshToken, RevokedToken}
-import app.repositories.{
-  UserRepository,
-  RefreshTokenRepository,
-  RevokedTokenRepository
-}
-import app.utils.{PasswordHasher, JwtUtil}
+import app.models.{RefreshToken, RevokedToken, User}
+import app.repositories.{RefreshTokenRepository, RevokedTokenRepository, UserRepository}
+import app.utils.{JwtUtil, PasswordHasher}
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 import play.api.Logging
@@ -19,10 +15,10 @@ case class LoginResult(tokens: AuthTokens, user: User)
 
 @Singleton
 class AuthService @Inject() (
-    userRepository: UserRepository,
-    refreshTokenRepository: RefreshTokenRepository,
-    revokedTokenRepository: RevokedTokenRepository,
-    jwtUtil: JwtUtil
+  userRepository: UserRepository,
+  refreshTokenRepository: RefreshTokenRepository,
+  revokedTokenRepository: RevokedTokenRepository,
+  jwtUtil: JwtUtil
 )(implicit ec: ExecutionContext)
     extends Logging {
 
@@ -30,8 +26,8 @@ class AuthService @Inject() (
   private val accessTokenExpiry = 900 // 15 minutes in seconds
 
   def login(
-      email: String,
-      password: String
+    email: String,
+    password: String
   ): Future[Either[String, LoginResult]] = {
     logger.info(s"Login attempt for email: $email")
 
@@ -80,7 +76,7 @@ class AuthService @Inject() (
   }
 
   def refreshAccessToken(
-      refreshToken: String
+    refreshToken: String
   ): Future[Either[String, String]] = {
     logger.info("Refreshing access token")
 
@@ -137,9 +133,10 @@ class AuthService @Inject() (
             logger.info(s"Access token revoked for user: $userId")
             true
           }
-          .recover { case ex: Exception =>
-            logger.error(s"Failed to revoke access token: ${ex.getMessage}", ex)
-            false
+          .recover {
+            case ex: Exception =>
+              logger.error(s"Failed to revoke access token: ${ex.getMessage}", ex)
+              false
           }
 
       case scala.util.Failure(ex) =>
@@ -151,8 +148,8 @@ class AuthService @Inject() (
   }
 
   def validateAccessToken(
-      token: String
-  ): Future[Option[(Long, String, String)]] = {
+    token: String
+  ): Future[Option[(Long, String, String)]] =
     // First check if token is revoked
     revokedTokenRepository.isTokenRevoked(token).flatMap {
       case true =>
@@ -168,5 +165,4 @@ class AuthService @Inject() (
             Future.successful(None)
         }
     }
-  }
 }

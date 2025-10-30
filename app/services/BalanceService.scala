@@ -7,12 +7,12 @@ import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
 case class UserBalanceSummary(
-    userId: Long,
-    userName: String,
-    userEmail: String,
-    amountOwed: Double,
-    amountOwing: Double,
-    netBalance: Double
+  userId: Long,
+  userName: String,
+  userEmail: String,
+  amountOwed: Double,
+  amountOwing: Double,
+  netBalance: Double
 )
 object UserBalanceSummary {
   implicit val format: OFormat[UserBalanceSummary] =
@@ -20,8 +20,8 @@ object UserBalanceSummary {
 }
 @Singleton
 class BalanceService @Inject() (
-    balanceRepository: BalanceRepository,
-    userRepository: UserRepository
+  balanceRepository: BalanceRepository,
+  userRepository: UserRepository
 )(implicit ec: ExecutionContext) {
 
   /** Get user's balance summary - who they owe and who owes them
@@ -56,9 +56,9 @@ class BalanceService @Inject() (
   /** Settle a balance between users, this would create settlement records
     */
   def settleBalance(
-      fromUserId: Long,
-      toUserId: Long,
-      amount: Double
+    fromUserId: Long,
+    toUserId: Long,
+    amount: Double
   ): Future[Boolean] =
     Future.successful(true)
 
