@@ -23,8 +23,8 @@ object Balance {
 class BalanceTable(tag: Tag) extends Table[Balance](tag, "balances") {
 
   def id: Rep[Long] = column[Long]("id", O.PrimaryKey, O.AutoInc)
-  def from: Rep[Long] = column[Long]("from_user") // rename in DB
-  def to: Rep[Long] = column[Long]("to_user") // rename in DB
+  def from: Rep[Long] = column[Long]("sender") // rename in DB
+  def to: Rep[Long] = column[Long]("receiver") // rename in DB
   def amount: Rep[Double] = column[Double]("amount")
   def expenseId: Rep[Long] = column[Long]("expense_id")
   def fromUserFk = foreignKey("fk_from_user", from, TableQuery[UserTable])(_.id)

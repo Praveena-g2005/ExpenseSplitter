@@ -13,7 +13,6 @@ GET     /assets/*file               controllers.Assets.versioned(path="/public",
 POST    /auth/register              app.controllers.AuthController.register
 POST    /auth/login                 app.controllers.AuthController.login
 POST    /auth/refresh               app.controllers.AuthController.refresh
-POST    /auth/logout                app.controllers.AuthController.logout
 
 
 # Admin APIs

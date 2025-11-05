@@ -8,7 +8,7 @@ class ExpenseTable(tag: Tag) extends Table[Expense](tag, "expenses") {
 
   // Columns
   def id: Rep[Long] = column[Long]("id", O.PrimaryKey, O.AutoInc)
-  def description: Rep[String] = column[String]("description")
+  def description: Rep[String] = column[String]("expense_name")
   def amount: Rep[Double] = column[Double]("amount")
   def paidBy: Rep[Long] = column[Long]("paid_by")
   def fk_paidby = foreignKey("fk_paidby", paidBy, TableQuery[UserTable])(_.id)

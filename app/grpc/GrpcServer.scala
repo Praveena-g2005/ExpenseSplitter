@@ -23,7 +23,6 @@ class GrpcServer @Inject() (
       .start()
 
   logger.info("[gRPC] NotificationService server started on :9001")
-
   // Graceful shutdown when Play stops
   lifecycle.addStopHook { () =>
     Future {

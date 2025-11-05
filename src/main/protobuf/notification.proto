@@ -15,6 +15,7 @@ message NotifyRequest {
   string message = 3;
 }
 
+
 message NotifyManyRequest {
   string expenseId = 1;
   repeated string recipients = 2;

@@ -13,16 +13,18 @@ case class JwtClaims(userId: Long, email: String, role: String)
 
 @Singleton
 class JwtUtil @Inject() (config: Configuration) {
+  private val accessSecret = config.get[String]("jwt.secret.access")
+  private val refreshSecret = config.get[String]("jwt.secret.refresh")
+  private val accessExpirySeconds = config.get[Int]("jwt.access-token-expiry") // 900 (15 min)
+  private val refreshExpirySeconds = config.get[Int]("jwt.refresh-token-expiry") // 7*24*3600 = 604800
 
-  private val secret = config.get[String]("jwt.secret")
-  private val algorithm = Algorithm.HMAC256(secret)
-  private val accessTokenExpiry =
-    config.get[Int]("jwt.access-token-expiry") // seconds
+  private val accessAlg = Algorithm.HMAC256(accessSecret)
+  private val refreshAlg = Algorithm.HMAC256(refreshSecret)
 
+  /** Generate short-lived access token */
   def createAccessToken(userId: Long, email: String, role: String): String = {
     val now = Instant.now()
-    val expiry = now.plusSeconds(accessTokenExpiry.toLong)
-
+    val expiry = now.plusSeconds(accessExpirySeconds.toLong)
     JWT
       .create()
       .withSubject(userId.toString)
@@ -30,16 +32,37 @@ class JwtUtil @Inject() (config: Configuration) {
       .withClaim("role", role)
       .withIssuedAt(Date.from(now))
       .withExpiresAt(Date.from(expiry))
-      .sign(algorithm)
+      .sign(accessAlg)
   }
 
-  def validateToken(token: String): Try[JwtClaims] =
-    Try {
-      val verifier = JWT.require(algorithm).build()
-      val decoded = verifier.verify(token)
-      val userId = decoded.getSubject.toLong
-      val email = decoded.getClaim("email").asString()
-      val role = decoded.getClaim("role").asString()
-      JwtClaims(userId, email, role)
-    }
+  /** Generate long-lived refresh token */
+  def createRefreshToken(userId: Long, email: String, role: String): String = {
+    val now = Instant.now()
+    val expiry = now.plusSeconds(refreshExpirySeconds.toLong)
+    JWT
+      .create()
+      .withSubject(userId.toString)
+      .withClaim("email", email)
+      .withClaim("role", role)
+      .withIssuedAt(Date.from(now))
+      .withExpiresAt(Date.from(expiry))
+      .sign(refreshAlg)
+  }
+
+  /** Validate access token and extract claims */
+  def validateAccessToken(token: String): Try[JwtClaims] = validate(token, accessAlg)
+
+  /** Validate refresh token and extract claims */
+  def validateRefreshToken(token: String): Try[JwtClaims] = validate(token, refreshAlg)
+
+  /** Shared validator */
+  private def validate(token: String, algorithm: Algorithm): Try[JwtClaims] = Try {
+    val verifier = JWT.require(algorithm).build()
+    val decoded = verifier.verify(token)
+    JwtClaims(
+      userId = decoded.getSubject.toLong,
+      email = decoded.getClaim("email").asString(),
+      role = decoded.getClaim("role").asString()
+    )
+  }
 }
